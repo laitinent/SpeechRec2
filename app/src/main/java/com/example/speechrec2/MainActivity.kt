@@ -10,19 +10,30 @@ import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
+import androidx.recyclerview.selection.ItemDetailsLookup
+import androidx.recyclerview.selection.SelectionTracker
+import androidx.recyclerview.selection.StableIdKeyProvider
+import androidx.recyclerview.selection.StorageStrategy
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
 
+
+
 class MainActivity : AppCompatActivity() {
 
-    private val REQ_CODE_SPEECH_INPUT = 100
+    private lateinit var viewAdapter: RecyclerView.Adapter<*>
+    private lateinit var viewManager: RecyclerView.LayoutManager
+    var myDataset = arrayListOf("Ostoslista")
 
     val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
         // Handle the returned result (=true/false)
@@ -33,7 +44,10 @@ class MainActivity : AppCompatActivity() {
         if (result.resultCode  == Activity.RESULT_OK) {
                 val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
                 txtSpeechInput.text = resultdata?.get(0) ?: "NOT FOUND"
-
+                if(!myDataset.contains(resultdata?.get(0))) {
+                    myDataset.add(resultdata?.get(0).toString())
+                    viewAdapter.notifyItemInserted(myDataset.size - 1)
+                }
         }
     }
 
@@ -41,6 +55,21 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+
+
+        viewManager = LinearLayoutManager(this)
+        viewAdapter = MyAdapter(myDataset)
+
+
+
+        recyclerView.apply {
+            layoutManager = viewManager
+            adapter = viewAdapter
+
+        }
+
+
 
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             txtSpeechInput.text = "No voice recognition support on your device!"
@@ -57,6 +86,12 @@ class MainActivity : AppCompatActivity() {
 
         btnSpeak.setOnClickListener {
            promptSpeechInput()
+        }
+        btnDelete.setOnClickListener {
+            if(myDataset.isNotEmpty()) {
+                myDataset.removeAt(myDataset.size-1)  // last
+                viewAdapter.notifyItemRemoved(myDataset.size) // note. size, not size-1
+            }
         }
     }
 

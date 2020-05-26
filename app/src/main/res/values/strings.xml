@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">SpeechRec2</string>
+    <string name="btn_add">Lisää</string>
+    <string name="btn_del">Poista</string>
 </resources>
