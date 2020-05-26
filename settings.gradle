@@ -1,0 +1,2 @@
+rootProject.name='SpeechRec2'
+include ':app'
