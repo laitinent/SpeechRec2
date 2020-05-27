@@ -1,10 +1,9 @@
 package com.example.speechrec2
 
+import android.graphics.Paint
 import android.view.LayoutInflater
-import android.view.MotionEvent
 import android.view.ViewGroup
 import android.widget.TextView
-import androidx.recyclerview.selection.ItemDetailsLookup
 import androidx.recyclerview.widget.RecyclerView
 
 /*
@@ -19,8 +18,10 @@ class MyItemDetailsLookup(private val recyclerView: RecyclerView) :
         return null
     }
 }*/
-
-class MyAdapter (private val myDataset: ArrayList<String>) :
+/**
+ * @param myDataset - list of ShoppingListItems
+ */
+class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     RecyclerView.Adapter<MyAdapter.MyViewHolder>() {
 /*
     init {
@@ -54,7 +55,15 @@ class MyAdapter (private val myDataset: ArrayList<String>) :
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
         // - get element from your dataset at this position
         // - replace the contents of the view with that element
-        holder.textView.text = myDataset[position]
+        // if selected second time, strike through to mark collected. requires dataset that contains objects with string and bool members
+        if(myDataset[position].collected) {
+            if(position>0) {holder.textView.paintFlags = holder.textView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG }
+        }
+        else {
+            holder.textView.paintFlags =
+                holder.textView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()   // TODO: check result
+        }
+        holder.textView.text = myDataset[position].title
     }
 
     // Return the size of your dataset (invoked by the layout manager)

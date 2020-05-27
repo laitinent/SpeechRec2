@@ -5,49 +5,49 @@ import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.view.MotionEvent
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.recyclerview.selection.ItemDetailsLookup
-import androidx.recyclerview.selection.SelectionTracker
-import androidx.recyclerview.selection.StableIdKeyProvider
-import androidx.recyclerview.selection.StorageStrategy
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
 
-
-
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
-    var myDataset = arrayListOf("Ostoslista")
+    private var myDataset = arrayListOf(ShoppingListItem("Ostoslista"))
 
-    val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
+    // grant permissions results handler
+    private val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
         // Handle the returned result (=true/false)
 
     }
 
-    val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+    // handle language recognition result
+    private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
         if (result.resultCode  == Activity.RESULT_OK) {
-                val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                txtSpeechInput.text = resultdata?.get(0) ?: "NOT FOUND"
-                if(!myDataset.contains(resultdata?.get(0))) {
-                    myDataset.add(resultdata?.get(0).toString())
-                    viewAdapter.notifyItemInserted(myDataset.size - 1)
-                }
+            val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            txtSpeechInput.text = resultdata?.get(0) ?: "NOT FOUND"
+            val item = ShoppingListItem( resultdata?.get(0).toString())   // collected defaults false
+            val checkedItem = ShoppingListItem( resultdata?.get(0).toString(),true)
+            // not on list
+            if(!myDataset.contains(item)) {
+                myDataset.add(item)
+                viewAdapter.notifyItemInserted(myDataset.size - 1)
+            }
+            else {
+                // already listed
+                val index = myDataset.indexOf(item)
+                myDataset.get(index).collected = !myDataset.contains(checkedItem)
+                viewAdapter.notifyItemChanged(index)
+            }
         }
     }
 
@@ -56,20 +56,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
-
         viewManager = LinearLayoutManager(this)
         viewAdapter = MyAdapter(myDataset)
-
-
 
         recyclerView.apply {
             layoutManager = viewManager
             adapter = viewAdapter
-
         }
-
-
 
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             txtSpeechInput.text = "No voice recognition support on your device!"
@@ -77,7 +70,7 @@ class MainActivity : AppCompatActivity() {
 
         getContent.launch(Manifest.permission.RECORD_AUDIO)
 
-/*
+/*      replaced my new androidx.activity:activity-ktx
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf( Manifest.permission.RECORD_AUDIO ), 1  )
             // See the documentation for ActivityCompat#requestPermissions for more details.
@@ -97,7 +90,7 @@ class MainActivity : AppCompatActivity() {
 
     /**
      * Showing google speech input dialog
-*/
+    */
     private fun promptSpeechInput() {
 
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -106,7 +99,7 @@ class MainActivity : AppCompatActivity() {
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Say something")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Sano lisättävä tuote")
         }.run {
             try {
                 startForResult.launch(this)
@@ -120,7 +113,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /*
+    /* unused, because replaced by new androidx.activity:activity-ktx
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 
         when (requestCode and 0xFFFF) {
@@ -135,4 +129,5 @@ class MainActivity : AppCompatActivity() {
         }
         super.onActivityResult(requestCode, resultCode, data)
     }*/
+
 }
