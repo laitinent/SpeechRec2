@@ -3,17 +3,21 @@ package com.example.speechrec2
 
 import android.Manifest
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Intent
+import android.content.*
+import android.content.pm.ActivityInfo
 import android.os.Bundle
+import android.os.PersistableBundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
@@ -22,7 +26,8 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
-    private var myDataset = arrayListOf(ShoppingListItem("Ostoslista"))
+    private val strFirst="Ostoslista"
+    private var myDataset = arrayListOf(ShoppingListItem(strFirst))
 
     // grant permissions results handler
     private val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
@@ -34,19 +39,39 @@ class MainActivity : AppCompatActivity() {
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
         if (result.resultCode  == Activity.RESULT_OK) {
             val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            txtSpeechInput.text = resultdata?.get(0) ?: "NOT FOUND"
-            val item = ShoppingListItem( resultdata?.get(0).toString())   // collected defaults false
-            val checkedItem = ShoppingListItem( resultdata?.get(0).toString(),true)
-            // not on list
-            if(!myDataset.contains(item)) {
-                myDataset.add(item)
-                viewAdapter.notifyItemInserted(myDataset.size - 1)
+            val word = resultdata?.get(0) ?:""
+            txtSpeechInput.text =  word ?: "NOT FOUND"
+
+            if(word.toLowerCase().startsWith("poista"))
+            {
+                //TODO: removeAt
+                val words = word.split(" ")
+                if(words.size>1) {
+                    val itemToRemove = ShoppingListItem(words[1])   // collected defaults false
+                    val checkedItemToRemove = ShoppingListItem(words[1], true)
+                    if (!myDataset.remove(itemToRemove)) {
+                        myDataset.remove(checkedItemToRemove)
+                    }
+                    viewAdapter.notifyDataSetChanged()
+                }
             }
             else {
-                // already listed
-                val index = myDataset.indexOf(item)
-                myDataset.get(index).collected = !myDataset.contains(checkedItem)
-                viewAdapter.notifyItemChanged(index)
+
+                val item = ShoppingListItem(word)   // collected defaults false
+                val checkedItem = ShoppingListItem(word, true)
+                // not on list, even checked version
+                if (!myDataset.contains(item) && !myDataset.contains(checkedItem)) {
+                    myDataset.add(item)
+                    viewAdapter.notifyItemInserted(myDataset.size - 1)
+                } else {
+                    // already listed
+                    var index = myDataset.indexOf(item)
+                    if (index == -1) {
+                        index = myDataset.indexOf(checkedItem)
+                    }
+                    myDataset.get(index).collected = !myDataset.contains(checkedItem)
+                    viewAdapter.notifyItemChanged(index)
+                }
             }
         }
     }
@@ -56,6 +81,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        if(savedInstanceState != null) {
+            try {
+                val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
+                val data = Gson().fromJson<ArrayList<ShoppingListItem>>(
+                    savedInstanceState?.getString(
+                        "lista"
+                    ), type
+                )
+
+                if (myDataset.addAll(data)) {
+                    myDataset.removeAt(0)
+                    viewAdapter.notifyItemRemoved(0)
+                }
+            } catch (ex: Exception) {
+                print(ex.message)
+            }
+        }
         viewManager = LinearLayoutManager(this)
         viewAdapter = MyAdapter(myDataset)
 
@@ -80,12 +122,48 @@ class MainActivity : AppCompatActivity() {
         btnSpeak.setOnClickListener {
            promptSpeechInput()
         }
+        // undo add
         btnDelete.setOnClickListener {
-            if(myDataset.isNotEmpty()) {
+            if(myDataset.size>1) {  // leave header at [0]
                 myDataset.removeAt(myDataset.size-1)  // last
-                viewAdapter.notifyItemRemoved(myDataset.size) // note. size, not size-1
+                recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
+            // TODO: should this undo strike through (now repeated same item toggles)
         }
+
+        btnDelete.setOnLongClickListener {
+            val builder = AlertDialog.Builder(this)
+
+            with(builder)
+            {
+                setTitle("Uusi lista")
+                setMessage("Haluatko tyhjentää listan?")
+                setPositiveButton(android.R.string.yes, DialogInterface.OnClickListener(function = positiveButtonClick))
+                setNegativeButton(android.R.string.no, negativeButtonClick)
+                //setNeutralButton("Maybe", neutralButtonClick)
+                show()
+            }
+            true
+        }
+    }
+
+
+    private val positiveButtonClick = { _: DialogInterface, _: Int ->
+        if(myDataset.size>1) {  // leave header at [0]
+            myDataset.subList(1, myDataset.size).clear();  // last
+            recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
+            //saveSharedPrefs()
+        }
+        Toast.makeText(applicationContext,
+            android.R.string.yes, Toast.LENGTH_SHORT).show()
+    }
+    private val negativeButtonClick = { _: DialogInterface, _: Int ->
+        Toast.makeText(applicationContext,
+            android.R.string.no, Toast.LENGTH_SHORT).show()
+    }
+    private val neutralButtonClick = { _: DialogInterface, _: Int ->
+        Toast.makeText(applicationContext,
+            "Maybe", Toast.LENGTH_SHORT).show()
     }
 
     /**
@@ -99,7 +177,7 @@ class MainActivity : AppCompatActivity() {
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
             )
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Sano lisättävä tuote")
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "Sano lisättävä tuote\n(voit poistaa \"poista ...\") ")
         }.run {
             try {
                 startForResult.launch(this)
@@ -113,7 +191,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /* unused, because replaced by new androidx.activity:activity-ktx
+    override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
+        outState.putString("lista",Gson().toJson(myDataset))
+        super.onSaveInstanceState(outState, outPersistentState)
+
+    }
+
+    override fun onPause() {
+        saveSharedPrefs()
+        super.onPause()
+    }
+
+    private fun saveSharedPrefs() {
+        val sharedPref = getPreferences(Context.MODE_PRIVATE)
+        val editor = sharedPref.edit()
+        editor.putString("SavedLista", Gson().toJson(myDataset))
+        editor.commit()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        val sharedPref = getPreferences(Context.MODE_PRIVATE)
+        try {
+            val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
+            val data = Gson().fromJson<ArrayList<ShoppingListItem>>(
+                sharedPref?.getString("SavedLista",""),
+                type
+            )
+            // restore only if reset
+            if(myDataset.size<=1) {
+
+                if (myDataset.addAll(data) && myDataset.size > 1) {
+                    // Remove duplicates
+                    val index = myDataset.lastIndexOf(ShoppingListItem(strFirst))
+                    if (index > 0) {
+                        myDataset.removeAt(index)
+                        viewAdapter.notifyItemRemoved(index)
+                    }
+                }
+            }
+        }
+        catch(ex: Exception){
+            print(ex.message)
+        }
+
+    }
+
+/* unused, because replaced by new androidx.activity:activity-ktx
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 

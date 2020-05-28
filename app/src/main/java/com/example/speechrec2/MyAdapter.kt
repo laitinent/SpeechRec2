@@ -56,14 +56,25 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
         // - get element from your dataset at this position
         // - replace the contents of the view with that element
         // if selected second time, strike through to mark collected. requires dataset that contains objects with string and bool members
-        if(myDataset[position].collected) {
-            if(position>0) {holder.textView.paintFlags = holder.textView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG }
+        try {
+            //if (myDataset != null) {//&& position >=0 && position < myDataset.size) {
+                if (position > 0) {   // do not modify header
+                    if (myDataset[position].collected) {
+                        holder.textView.paintFlags =
+                            holder.textView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
+                    }
+                    else {
+                        holder.textView.paintFlags =
+                            holder.textView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()   // TODO: check result
+                    }
+                }
+                holder.textView.text = myDataset[position].title
+            //}
         }
-        else {
-            holder.textView.paintFlags =
-                holder.textView.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()   // TODO: check result
+        catch(ex:Exception)
+        {
+            print(ex.message)
         }
-        holder.textView.text = myDataset[position].title
     }
 
     // Return the size of your dataset (invoked by the layout manager)
