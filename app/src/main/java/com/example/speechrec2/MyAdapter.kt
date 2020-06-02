@@ -18,6 +18,12 @@ class MyItemDetailsLookup(private val recyclerView: RecyclerView) :
         return null
     }
 }*/
+
+/**
+ * @seealso https://www.skcript.com/svr/how-to-add-header-to-recyclerview-in-android/
+ * TO ADD HEADER
+ */
+
 /**
  * @param myDataset - list of ShoppingListItems
  */
