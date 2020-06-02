@@ -21,13 +21,16 @@ import com.google.gson.reflect.TypeToken
 import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
+/**
+ * "header" - see MyAdapter, it is using 2 layouts, another for header. That is, header is not part of list anymore
+ */
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
-    private val strFirst="Ostoslista"
-    private var myDataset = arrayListOf(ShoppingListItem(strFirst))
+    //private val strFirst="Ostoslista"
+    private var myDataset = arrayListOf<ShoppingListItem>()
 
     // grant permissions results handler
     private val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
@@ -39,12 +42,12 @@ class MainActivity : AppCompatActivity() {
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
         if (result.resultCode  == Activity.RESULT_OK) {
             val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val word = resultdata?.get(0) ?:""
-            txtSpeechInput.text =  word ?: "NOT FOUND"
+            val word = resultdata?.get(0) ?:"NOT FOUND"
+            txtSpeechInput.text =  word //?: "NOT FOUND"
 
             if(word.toLowerCase().startsWith("poista"))
             {
-                //TODO: removeAt
+                // removeAt
                 val words = word.split(" ")
                 if(words.size>1) {
                     val itemToRemove = ShoppingListItem(words[1])   // collected defaults false
@@ -56,7 +59,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             else {
-
+                // Add
                 val item = ShoppingListItem(word)   // collected defaults false
                 val checkedItem = ShoppingListItem(word, true)
                 // not on list, even checked version
@@ -81,23 +84,25 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        if(savedInstanceState != null) {
+        //if(savedInstanceState != null) {
             try {
                 val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
-                val data = Gson().fromJson<ArrayList<ShoppingListItem>>(
-                    savedInstanceState?.getString(
-                        "lista"
-                    ), type
+                //myDataset.addAll(
+                val data =
+                    Gson().fromJson<ArrayList<ShoppingListItem>>(
+                    savedInstanceState?.getString("lista"), type
                 )
 
-                if (myDataset.addAll(data)) {
+                //if (
+                    myDataset.addAll(data)    // using header
+                /*){
                     myDataset.removeAt(0)
                     viewAdapter.notifyItemRemoved(0)
-                }
+                }*/
             } catch (ex: Exception) {
                 print(ex.message)
             }
-        }
+        //}
         viewManager = LinearLayoutManager(this)
         viewAdapter = MyAdapter(myDataset)
 
@@ -119,29 +124,36 @@ class MainActivity : AppCompatActivity() {
             return
         }*/
 
+        // Listen and add
         btnSpeak.setOnClickListener {
            promptSpeechInput()
         }
         // undo add
         btnDelete.setOnClickListener {
-            if(myDataset.size>1) {  // leave header at [0]
+            if(!myDataset.isEmpty()) {  // leave header at [0] (when using header, not used
                 myDataset.removeAt(myDataset.size-1)  // last
                 recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
         }
 
+        // reset
         btnDelete.setOnLongClickListener {
-            val builder = AlertDialog.Builder(this)
+            if(!myDataset.isEmpty()) {
+                val builder = AlertDialog.Builder(this)
 
-            with(builder)
-            {
-                setTitle("Uusi lista")
-                setMessage("Haluatko tyhjentää listan?")
-                setPositiveButton(android.R.string.yes, DialogInterface.OnClickListener(function = positiveButtonClick))
-                setNegativeButton(android.R.string.no, negativeButtonClick)
-                //setNeutralButton("Maybe", neutralButtonClick)
-                show()
+                with(builder)
+                {
+                    setTitle("Uusi lista")
+                    setMessage("Haluatko tyhjentää listan?")
+                    setPositiveButton(
+                        android.R.string.yes,
+                        DialogInterface.OnClickListener(function = positiveButtonClick)
+                    )
+                    setNegativeButton(android.R.string.no, negativeButtonClick)
+                    //setNeutralButton("Maybe", neutralButtonClick)
+                    show()
+                }
             }
             true
         }
@@ -149,11 +161,12 @@ class MainActivity : AppCompatActivity() {
 
 
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
-        if(myDataset.size>1) {  // leave header at [0]
-            myDataset.subList(1, myDataset.size).clear();  // last
+        //if(myDataset.size>1) {  // leave header at [0]
+            //myDataset.subList(1, myDataset.size).clear();  // last
+            myDataset.clear();  // last (using header)
             recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
-            //saveSharedPrefs()
-        }
+            saveSharedPrefs()
+        //}
         Toast.makeText(applicationContext,
             android.R.string.yes, Toast.LENGTH_SHORT).show()
     }
@@ -171,7 +184,7 @@ class MainActivity : AppCompatActivity() {
     */
     private fun promptSpeechInput() {
 
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(
                 RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
@@ -219,16 +232,18 @@ class MainActivity : AppCompatActivity() {
                 type
             )
             // restore only if reset
-            if(myDataset.size<=1) {
+            if(myDataset.isEmpty()) {   // was <=1 before header
 
-                if (myDataset.addAll(data) && myDataset.size > 1) {
+                //if (
+                    myDataset.addAll(data)
+                            /*&& myDataset.size > 1) {
                     // Remove duplicates
                     val index = myDataset.lastIndexOf(ShoppingListItem(strFirst))
                     if (index > 0) {
                         myDataset.removeAt(index)
                         viewAdapter.notifyItemRemoved(index)
                     }
-                }
+                }*/
             }
         }
         catch(ex: Exception){
