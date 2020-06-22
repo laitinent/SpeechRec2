@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.PersistableBundle
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,8 +26,9 @@ import java.util.*
  * "header" - see MyAdapter, it is using 2 layouts, another for header. That is, header is not part of list anymore
  */
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
+    private lateinit var tts: TextToSpeech
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
     private lateinit var viewManager: RecyclerView.LayoutManager
     //private val strFirst="Ostoslista"
@@ -75,10 +77,84 @@ class MainActivity : AppCompatActivity() {
                     myDataset.get(index).collected = !myDataset.contains(checkedItem)
                     viewAdapter.notifyItemChanged(index)
                 }
+
+                speakOut(toSavo(word))
             }
         }
     }
 
+    val vowels=arrayOf("a","e","i","o","u","y","ä","ö")
+    private fun toSavo(wordToConvert :String) : String
+    {
+        var w = wordToConvert
+        if(w.endsWith("io")){
+            w = w.replace("io","ijo")
+        }
+
+        w= convertInStart(w, "aa","ua")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ai","ae")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "au","aa")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ee","ie")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ei","ee")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "eu","eo")
+        if(w != wordToConvert)return w
+
+
+        w= convertInStart(w, "oi","oe")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ou","oo")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ui","ue")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "yi","ye")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "äi","äe")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "äy","ää")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "ää","iä")
+        if(w != wordToConvert)return w
+
+        w= convertInStart(w, "öy","öö")
+        if(w != wordToConvert)return w
+
+
+
+        return w
+    }
+
+    private fun convertInStart(wordToConvert: String, s1: String, s2:String) :String {
+        var w=wordToConvert
+        if (wordToConvert.length > 2 && (wordToConvert.substring(
+                0,
+                2
+            ) == s1 || wordToConvert.substring(1, 3) == s1)
+        ) {
+            w = wordToConvert.replace(s1, s2)
+        }
+        return w
+    }
+/*
+    private fun isDoubleVowel(w:String):Boolean
+    {
+        if(w.indexOf())
+    }*/
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,6 +192,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         getContent.launch(Manifest.permission.RECORD_AUDIO)
+
+        tts = TextToSpeech(this, this)
 
 /*      replaced my new androidx.activity:activity-ktx
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -159,6 +237,20 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+
+    public override fun onDestroy() {
+        // Shutdown TTS
+        if (tts != null) {
+            tts!!.stop()
+            tts!!.shutdown()
+        }
+        super.onDestroy()
+    }
+
+    private fun speakOut(text: String) {
+        //val text = editText!!.text.toString()
+        tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null,"")
+    }
 
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
         //if(myDataset.size>1) {  // leave header at [0]
@@ -250,6 +342,10 @@ class MainActivity : AppCompatActivity() {
             print(ex.message)
         }
 
+    }
+
+    override fun onInit(p0: Int) {
+        //TODO("Not yet implemented")
     }
 
 /* unused, because replaced by new androidx.activity:activity-ktx
