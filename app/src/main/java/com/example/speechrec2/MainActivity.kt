@@ -78,18 +78,71 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                     viewAdapter.notifyItemChanged(index)
                 }
 
-                speakOut(toSavo(word))
+                val words = word.split(" ")
+                var savoWords = ""
+                //if(words.size>1) {
+                // translate each word
+                    for(w in words) {
+                        savoWords+= (toSavo(w) + " ")
+
+                    }
+                // output whole sentence
+                speakOut(savoWords)
+               // }
             }
         }
     }
 
-    val vowels=arrayOf("a","e","i","o","u","y","ä","ö")
-    private fun toSavo(wordToConvert :String) : String
+    private val vowels=arrayOf('a','e','i','o','u','y','ä','ö')
+    public fun toSavo(wordToConvert :String) : String
     {
         var w = wordToConvert
         if(w.endsWith("io")){
             w = w.replace("io","ijo")
         }
+
+        if(w.endsWith("i") && w[w.length-2] != 'k' && w[w.length-2] != 'r'){
+            w = w.substring(0, w.length-1) + "j"
+        }
+
+        // halpaa->halpoo
+        if(w.endsWith("a") && w[w.length-2] != 'i' && vowels.contains(w[w.length-2])){
+            w = w.substring(0, w.length-2) + "oo"
+        }
+
+
+        for(s in arrayOf("lh","lj","lk","lp","lv","nh")) {
+            w = convertInMiddle(w, s);
+        }
+
+        // diana -> tiana TODO: ends
+        if(w.startsWith("d", true)){
+            w = "t"+ w.substring(1, w.length-1)
+        }
+
+        // kristus -> ristus
+        if(!vowels.contains(w[0]) && !vowels.contains(w[1])){
+            w = if(w[1]=='h') {
+                w[0]+ w.substring(2, w.length)
+            }
+            else
+            {
+                w.substring(1, w.length)
+            }
+        }
+
+        // käden -> käen
+        val index = w.indexOf("d")
+        if(index>0 && index < w.length-1){
+            val i1 = w[index-1]
+            w = if(w[index-1]=='u' || w[index+1]=='u') {
+                w.replace("d", "v")
+            } else {
+                w.replace("d", "")
+            }
+        }
+        
+        w= w.replace("b", "p")
 
         w= convertInStart(w, "aa","ua")
         if(w != wordToConvert)return w
@@ -139,6 +192,13 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         return w
     }
 
+    /**
+     * Process 2 letters in start of word (1st or 2nd)
+     * @param wordToConvert - string to process
+     * @param s1 - template for modifying (2 chars)
+     * @param s2 - replace string (2 chars)
+     * @return - modified string, if match, original otrherwise
+     */
     private fun convertInStart(wordToConvert: String, s1: String, s2:String) :String {
         var w=wordToConvert
         if (wordToConvert.length > 2 && (wordToConvert.substring(
@@ -147,6 +207,28 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             ) == s1 || wordToConvert.substring(1, 3) == s1)
         ) {
             w = wordToConvert.replace(s1, s2)
+        }
+        return w
+    }
+
+    /**
+     * process 2 letters starting from 2nd or 3rd
+     * @param wordToConvert - string to process
+     * @param s1 - template for modifying (2 chars)
+     * @return - modified string, if match, original otrherwise
+     */
+    private fun convertInMiddle(wordToConvert: String, s1: String) :String {
+        var w=wordToConvert // to mutable
+        if (s1.length >1 && wordToConvert.length > 3) {
+
+            // double preceding vowel : kalja -> kalaja
+            if (wordToConvert.substring(1, 3) == s1 && vowels.contains(wordToConvert[0])) {
+                w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[0] + s1[1])
+            }
+
+            if (wordToConvert.substring(2, 4) == s1 && vowels.contains(wordToConvert[1])) {
+                w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[1] + s1[1])
+            }
         }
         return w
     }
@@ -213,6 +295,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
+            
         }
 
         // reset
@@ -249,7 +332,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
     private fun speakOut(text: String) {
         //val text = editText!!.text.toString()
-        tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null,"")
+        tts!!.speak(text, TextToSpeech.QUEUE_ADD, null,"") // was QUEUE_FLUSH
     }
 
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
