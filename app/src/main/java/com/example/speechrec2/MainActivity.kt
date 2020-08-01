@@ -4,7 +4,6 @@ package com.example.speechrec2
 import android.Manifest
 import android.app.Activity
 import android.content.*
-import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.speech.RecognizerIntent
@@ -96,21 +95,79 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     private val vowels=arrayOf('a','e','i','o','u','y','ä','ö')
     public fun toSavo(wordToConvert :String) : String
     {
-        var w = wordToConvert
+        //TODO: all rules from config file
+        //TODO: second syllable au -> aa etc.
+        // TODO: olla
+
+        var w = wordToConvert.toLowerCase()
+
+        // ENDINGS
         if(w.endsWith("io")){
             w = w.replace("io","ijo")
         }
 
-        if(w.endsWith("i") && w[w.length-2] != 'k' && w[w.length-2] != 'r'){
+
+        // hämmentää -> hämmentee, hätää-> hättee
+        if(w.endsWith("tää")) {
+            w = if (w.endsWith("ntää")) {
+                w.replace("ntää", "ntee")
+            } else {
+                w.replace("tää", "ttee")
+            }
+        }
+
+        // olen -> oon
+        if(w.startsWith("ole", true) && !w.startsWith("olento")){
+            w = w.replace("ole", "oo")
+            return w
+        }
+
+        if(w== "ei") { return "ee" }
+
+        //TODO: triple vowel: kauas -> kauvas
+
+        val index3 = indexOfTripleVowel(w)
+        if(index3 > -1 && !w.contains("aaa"))   // vaa'an
+        {
+           w=if(w[index3 + 1]=='i') {
+               w.substring(0, index3) + "j"+ w.substring(index3, w.length)
+           }
+            else
+           {
+               w.substring(0, index3) + "v"+ w.substring(index3, w.length)
+           }
+        }
+
+        //hakaa -> hakkaa (-> hakkoo)
+        if(w.length>4) {
+            val index4 = indexOfVCVV(w)
+            if (index4 > -1) {
+                // double the consonant (w[index4+1])
+                w = w.substring(0, index4+1) + w[index4+1] + w.substring(index4+1, w.length)
+            }
+        }
+
+
+        if(w.length>3 && w.endsWith("i") && w[w.length-2] != 'k' && w[w.length-2] != 'r'){
             w = w.substring(0, w.length-1) + "j"
         }
 
-        // halpaa->halpoo
-        if(w.endsWith("a") && w[w.length-2] != 'i' && vowels.contains(w[w.length-2])){
-            w = w.substring(0, w.length-2) + "oo"
+        // pyöreä -> pyöree
+        if(w.endsWith("ea") || w.endsWith("eä") ){
+            w = w.substring(0, w.length-2) + "ee"
+        }
+        else {
+            // halpaa->halpoo
+            if (w.endsWith("a") && w[w.length - 2] != 'i' && vowels.contains(w[w.length - 2])) {
+                w = w.substring(0, w.length - 2) + "oo"
+            }
         }
 
+        if(w.endsWith("ea") ){
+            w = w.substring(0, w.length-2) + "ee"
+        }
 
+        // kalkkuna -> kalakkuna
         for(s in arrayOf("lh","lj","lk","lp","lv","nh")) {
             w = convertInMiddle(w, s);
         }
@@ -120,7 +177,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             w = "t"+ w.substring(1, w.length-1)
         }
 
-        // kristus -> ristus
+        // no double consonant on start: kristus -> ristus
         if(!vowels.contains(w[0]) && !vowels.contains(w[1])){
             w = if(w[1]=='h') {
                 w[0]+ w.substring(2, w.length)
@@ -131,11 +188,12 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             }
         }
 
+        // D and B replaced always
         // käden -> käen
         val index = w.indexOf("d")
         if(index>0 && index < w.length-1){
             val i1 = w[index-1]
-            w = if(w[index-1]=='u' || w[index+1]=='u') {
+            w = if(/* w[index-1]=='u' || */ w[index+1]=='u') {
                 w.replace("d", "v")
             } else {
                 w.replace("d", "")
@@ -144,49 +202,62 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         
         w= w.replace("b", "p")
 
-        w= convertInStart(w, "aa","ua")
-        if(w != wordToConvert)return w
+        // 1ST SYLLABLE VOWELS
+        var s2="ua"
+        w= convertInStart(w, "aa",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ai","ae")
-        if(w != wordToConvert)return w
+        s2="ae"
+        w= convertInStart(w, "ai",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "au","aa")
-        if(w != wordToConvert)return w
+        s2="aa"
+        w= convertInStart(w, "au",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ee","ie")
-        if(w != wordToConvert)return w
+        s2="ie"
+        w= convertInStart(w, "ee",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ei","ee")
-        if(w != wordToConvert)return w
+        s2="ee"
+        w= convertInStart(w, "ei",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "eu","eo")
-        if(w != wordToConvert)return w
+        s2="eo"
+        w= convertInStart(w, "eu",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
+        s2="oe"
+        w= convertInStart(w, "oi",s2) // TODO: does it work ("voi"->"voi" mutta "voit"-> "voet")
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "oi","oe")
-        if(w != wordToConvert)return w
+        s2="oo"
+        w= convertInStart(w, "ou",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ou","oo")
-        if(w != wordToConvert)return w
+        s2="ue"
+        w= convertInStart(w, "ui",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ui","ue")
-        if(w != wordToConvert)return w
+        s2="ye"
+        w= convertInStart(w, "yi",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "yi","ye")
-        if(w != wordToConvert)return w
+        s2="äe"
+        w= convertInStart(w, "äi",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "äi","äe")
-        if(w != wordToConvert)return w
+        s2="ää"
+        w= convertInStart(w, "äy",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "äy","ää")
-        if(w != wordToConvert)return w
+        s2="iä"
+        w= convertInStart(w, "ää",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-        w= convertInStart(w, "ää","iä")
-        if(w != wordToConvert)return w
-
-        w= convertInStart(w, "öy","öö")
-        if(w != wordToConvert)return w
-
+        s2="öö"
+        w= convertInStart(w, "öy",s2)
+        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
 
         return w
@@ -201,11 +272,9 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
      */
     private fun convertInStart(wordToConvert: String, s1: String, s2:String) :String {
         var w=wordToConvert
-        if (wordToConvert.length > 2 && (wordToConvert.substring(
-                0,
-                2
-            ) == s1 || wordToConvert.substring(1, 3) == s1)
-        ) {
+        if ((wordToConvert.length > 1 && wordToConvert.substring( 0, 2 ) == s1)
+                || (wordToConvert.length > 2 && wordToConvert.substring(1, 3) == s1))
+        {
             w = wordToConvert.replace(s1, s2)
         }
         return w
@@ -232,11 +301,41 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         }
         return w
     }
-/*
-    private fun isDoubleVowel(w:String):Boolean
+
+    /**
+     * search triple consecutive vowels in text
+     * @param w - word to search
+     * @returns index of first occurrence
+     */
+    private fun indexOfTripleVowel(w:String):Int
     {
-        if(w.indexOf())
-    }*/
+        for (c in 0 .. w.length-3)
+        if(vowels.contains(w[c]) && vowels.contains(w[c+1]) && vowels.contains(w[c+2]))
+        {
+            return c
+        }
+        return -1
+    }
+
+    /**
+     * search (none or consonent+) vowel+consonent+2xvowel  in text
+     * @param w - word to search
+     * @returns index of first occurrence
+     */
+    private fun indexOfVCVV(w:String):Int
+    {
+        for (c in 0 .. w.length-4) {
+            if (c == 0 || !vowels.contains(w[c - 1])) {
+                if (vowels.contains(w[c]) && !vowels.contains(w[c + 1]) && vowels.contains(w[c + 2]) && vowels.contains(
+                        w[c + 3]
+                    )
+                ) {
+                    return c
+                }
+            }
+        }
+        return -1
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -261,6 +360,8 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 print(ex.message)
             }
         //}
+
+        // recyclerView stuff
         viewManager = LinearLayoutManager(this)
         viewAdapter = MyAdapter(myDataset)
 
@@ -269,6 +370,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             adapter = viewAdapter
         }
 
+        // speech & text-to-speech
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             txtSpeechInput.text = "No voice recognition support on your device!"
         }
@@ -284,6 +386,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             return
         }*/
 
+        // Buttons
         // Listen and add
         btnSpeak.setOnClickListener {
            promptSpeechInput()
@@ -295,7 +398,10 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
-            
+            var s = toSavo("En")+" "
+            s += toSavo("ole")+" "
+            s += toSavo("oikeassa")
+            print(s)
         }
 
         // reset
@@ -332,7 +438,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
     private fun speakOut(text: String) {
         //val text = editText!!.text.toString()
-        tts!!.speak(text, TextToSpeech.QUEUE_ADD, null,"") // was QUEUE_FLUSH
+        tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null,"") // was QUEUE_FLUSH
     }
 
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
