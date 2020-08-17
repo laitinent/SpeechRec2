@@ -43,10 +43,11 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
         if (result.resultCode  == Activity.RESULT_OK) {
             val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val word = resultdata?.get(0) ?:"NOT FOUND"
+            val word_orig = resultdata?.get(0) ?:"NOT FOUND"
+            val word = word_orig.toLowerCase()
             txtSpeechInput.text =  word //?: "NOT FOUND"
 
-            if(word.toLowerCase().startsWith("poista"))
+            if(word.startsWith("poista"))
             {
                 // removeAt
                 val words = word.split(" ")
@@ -66,13 +67,17 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 // not on list, even checked version
                 if (!myDataset.contains(item) && !myDataset.contains(checkedItem)) {
                     myDataset.add(item)
-                    viewAdapter.notifyItemInserted(myDataset.size - 1)
+                    viewAdapter.notifyItemInserted(myDataset.size) // was - 1
+                    //viewAdapter.notifyDataSetChanged()
                 } else {
                     // already listed
+                    // item not collected?
                     var index = myDataset.indexOf(item)
+                    // item already collected?
                     if (index == -1) {
                         index = myDataset.indexOf(checkedItem)
                     }
+                    // reverse collected status
                     myDataset.get(index).collected = !myDataset.contains(checkedItem)
                     viewAdapter.notifyItemChanged(index)
                 }
@@ -83,7 +88,6 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 // translate each word
                     for(w in words) {
                         savoWords+= (toSavo(w) + " ")
-
                     }
                 // output whole sentence
                 speakOut(savoWords)
@@ -93,7 +97,8 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     }
 
     private val vowels=arrayOf('a','e','i','o','u','y','ä','ö')
-    public fun toSavo(wordToConvert :String) : String
+
+    fun toSavo(wordToConvert :String) : String
     {
         //TODO: all rules from config file
         //TODO: second syllable au -> aa etc.
@@ -113,6 +118,15 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 w.replace("ntää", "ntee")
             } else {
                 w.replace("tää", "ttee")
+            }
+        }
+
+        // odottaa -> odottoo
+        if(w.endsWith("taa")) {
+            w = if (w.endsWith("ntaa")) {
+                w.replace("ntaa", "ntoo")   // probably same as below, here simply copied from above
+            } else {
+                w.replace("taa", "too")
             }
         }
 
@@ -157,7 +171,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             w = w.substring(0, w.length-2) + "ee"
         }
         else {
-            // halpaa->halpoo
+            // halpaa->halpoo (actually -> halapoo)
             if (w.endsWith("a") && w[w.length - 2] != 'i' && vowels.contains(w[w.length - 2])) {
                 w = w.substring(0, w.length - 2) + "oo"
             }
@@ -168,7 +182,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         }
 
         // kalkkuna -> kalakkuna
-        for(s in arrayOf("lh","lj","lk","lp","lv","nh")) {
+        for(s in arrayOf("lh","lj","lk","lm","lp","lv","nh")) {
             w = convertInMiddle(w, s);
         }
 
@@ -180,7 +194,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         // no double consonant on start: kristus -> ristus
         if(!vowels.contains(w[0]) && !vowels.contains(w[1])){
             w = if(w[1]=='h') {
-                w[0]+ w.substring(2, w.length)
+                w[0]+ w.substring(2, w.length)  // shekki -> sekki
             }
             else
             {
@@ -201,6 +215,26 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         }
         
         w= w.replace("b", "p")
+
+
+        var s3=""    // define as var for later use
+
+        // kalaisa -> kalaesa
+        s3="ai"
+        w= convertInMiddle2(w, "ae",s3)
+
+        // kolaus -> kollaas
+        s3="au"
+        w= convertInMiddle2(w, "aa",s3)
+
+        // kolea -> kollee
+        s3="ea"
+        w= convertInMiddle2(w, "ee",s3)
+
+        s3="ei"
+        w= convertInMiddle2(w, "ee",s3)
+
+        // TODO: more middle conversions
 
         // 1ST SYLLABLE VOWELS
         var s2="ua"
@@ -298,6 +332,25 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             if (wordToConvert.substring(2, 4) == s1 && vowels.contains(wordToConvert[1])) {
                 w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[1] + s1[1])
             }
+
+        }
+        return w
+    }
+
+    /**
+     * process 2 letters starting from 1nd, 3rd or 4th
+     * @param wordToConvert - string to process
+     * @param s1 - template for modifying (2 chars)
+     * @param s2 - replace string (2 chars)
+     * @return - modified string, if match, original otrherwise
+     */
+    private fun convertInMiddle2(wordToConvert: String, s1: String, s2:String) :String {
+        var w=wordToConvert
+        if ((wordToConvert.length > 3 && wordToConvert.substring( 2,4 ) == s1)
+            || (wordToConvert.length > 4 && wordToConvert.substring(3,5) == s1)
+            || (wordToConvert.length > 5 && wordToConvert.substring(4,6) == s1))
+        {
+            w = wordToConvert.replace(s1, s2)
         }
         return w
     }
@@ -343,6 +396,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
         //if(savedInstanceState != null) {
             try {
+                // list was saved as JSON string
                 val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
                 //myDataset.addAll(
                 val data =
@@ -398,10 +452,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
-            var s = toSavo("En")+" "
-            s += toSavo("ole")+" "
-            s += toSavo("oikeassa")
-            print(s)
+
         }
 
         // reset
@@ -414,10 +465,10 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                     setTitle("Uusi lista")
                     setMessage("Haluatko tyhjentää listan?")
                     setPositiveButton(
-                        android.R.string.yes,
+                        android.R.string.ok,
                         DialogInterface.OnClickListener(function = positiveButtonClick)
                     )
-                    setNegativeButton(android.R.string.no, negativeButtonClick)
+                    setNegativeButton(android.R.string.cancel, negativeButtonClick)
                     //setNeutralButton("Maybe", neutralButtonClick)
                     show()
                 }
@@ -449,16 +500,17 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             saveSharedPrefs()
         //}
         Toast.makeText(applicationContext,
-            android.R.string.yes, Toast.LENGTH_SHORT).show()
+            android.R.string.ok, Toast.LENGTH_SHORT).show()
     }
     private val negativeButtonClick = { _: DialogInterface, _: Int ->
         Toast.makeText(applicationContext,
-            android.R.string.no, Toast.LENGTH_SHORT).show()
+            android.R.string.cancel, Toast.LENGTH_SHORT).show()
     }
+    /*
     private val neutralButtonClick = { _: DialogInterface, _: Int ->
         Toast.makeText(applicationContext,
             "Maybe", Toast.LENGTH_SHORT).show()
-    }
+    }*/
 
     /**
      * Showing google speech input dialog
@@ -500,7 +552,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         val sharedPref = getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
         editor.putString("SavedLista", Gson().toJson(myDataset))
-        editor.commit()
+        editor.apply()
     }
 
     override fun onResume() {
