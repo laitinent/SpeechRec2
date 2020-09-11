@@ -2,14 +2,17 @@ package com.example.speechrec2
 
 
 import android.Manifest
+import android.R.*
 import android.app.Activity
 import android.content.*
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.speech.RecognizerIntent
+import android.speech.RecognizerIntent.*
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.widget.Toast
+import android.widget.Toast.*
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -25,7 +28,7 @@ import java.util.*
  * "header" - see MyAdapter, it is using 2 layouts, another for header. That is, header is not part of list anymore
  */
 
-class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
+class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeech.OnInitListener{
 
     private lateinit var tts: TextToSpeech
     private lateinit var viewAdapter: RecyclerView.Adapter<*>
@@ -42,9 +45,9 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     // handle language recognition result
     private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
         if (result.resultCode  == Activity.RESULT_OK) {
-            val resultdata = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-            val word_orig = resultdata?.get(0) ?:"NOT FOUND"
-            val word = word_orig.toLowerCase()
+            val resultdata = result.data?.getStringArrayListExtra(EXTRA_RESULTS)
+            val wordOrig = resultdata?.get(0) ?:"NOT FOUND"
+            val word = wordOrig.toLowerCase(Locale.getDefault())
             txtSpeechInput.text =  word //?: "NOT FOUND"
 
             if(word.startsWith("poista"))
@@ -65,7 +68,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 val item = ShoppingListItem(word)   // collected defaults false
                 val checkedItem = ShoppingListItem(word, true)
                 // not on list, even checked version
-                if (!myDataset.contains(item) && !myDataset.contains(checkedItem)) {
+                if (item !in myDataset && checkedItem !in myDataset) {
                     myDataset.add(item)
                     viewAdapter.notifyItemInserted(myDataset.size) // was - 1
                     //viewAdapter.notifyDataSetChanged()
@@ -78,7 +81,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                         index = myDataset.indexOf(checkedItem)
                     }
                     // reverse collected status
-                    myDataset.get(index).collected = !myDataset.contains(checkedItem)
+                    myDataset[index].collected = checkedItem !in myDataset
                     viewAdapter.notifyItemChanged(index)
                 }
 
@@ -86,9 +89,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                 var savoWords = ""
                 //if(words.size>1) {
                 // translate each word
-                    for(w in words) {
-                        savoWords+= (toSavo(w) + " ")
-                    }
+                    for(w in words) savoWords += (toSavo(w) + " ")
                 // output whole sentence
                 speakOut(savoWords)
                // }
@@ -98,13 +99,13 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
     private val vowels=arrayOf('a','e','i','o','u','y','ä','ö')
 
-    fun toSavo(wordToConvert :String) : String
+    private fun toSavo(wordToConvert :String) : String
     {
         //TODO: all rules from config file
         //TODO: second syllable au -> aa etc.
         // TODO: olla
 
-        var w = wordToConvert.toLowerCase()
+        var w = wordToConvert.toLowerCase(Locale.getDefault())
 
         // ENDINGS
         if(w.endsWith("io")){
@@ -121,7 +122,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
             }
         }
 
-        // odottaa -> odottoo
+        // odottaa -> odottoo (-> oottoo)
         if(w.endsWith("taa")) {
             w = if (w.endsWith("ntaa")) {
                 w.replace("ntaa", "ntoo")   // probably same as below, here simply copied from above
@@ -183,7 +184,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
         // kalkkuna -> kalakkuna
         for(s in arrayOf("lh","lj","lk","lm","lp","lv","nh")) {
-            w = convertInMiddle(w, s);
+            w = convertInMiddle(w, s)
         }
 
         // diana -> tiana TODO: ends
@@ -263,7 +264,7 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
 
         s2="oe"
         w= convertInStart(w, "oi",s2) // TODO: does it work ("voi"->"voi" mutta "voit"-> "voet")
-        if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
+        if(w != wordToConvert) return w //if(w.endsWith(s2)) w+"h" else w
 
         s2="oo"
         w= convertInStart(w, "ou",s2)
@@ -362,10 +363,10 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
      */
     private fun indexOfTripleVowel(w:String):Int
     {
-        for (c in 0 .. w.length-3)
-        if(vowels.contains(w[c]) && vowels.contains(w[c+1]) && vowels.contains(w[c+2]))
+        for (index in 0 .. w.length-3)
+        if(vowels.contains(w[index]) && vowels.contains(w[index+1]) && vowels.contains(w[index+2]))
         {
-            return c
+            return index
         }
         return -1
     }
@@ -377,13 +378,13 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
      */
     private fun indexOfVCVV(w:String):Int
     {
-        for (c in 0 .. w.length-4) {
-            if (c == 0 || !vowels.contains(w[c - 1])) {
-                if (vowels.contains(w[c]) && !vowels.contains(w[c + 1]) && vowels.contains(w[c + 2]) && vowels.contains(
-                        w[c + 3]
+        for (index in 0 .. w.length-4) {
+            if (index == 0 || !vowels.contains(w[index - 1])) {
+                if (vowels.contains(w[index]) && !vowels.contains(w[index + 1]) && vowels.contains(w[index + 2]) && vowels.contains(
+                        w[index + 3]
                     )
                 ) {
-                    return c
+                    return index
                 }
             }
         }
@@ -447,17 +448,19 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
         }
         // undo add
         btnDelete.setOnClickListener {
-            if(!myDataset.isEmpty()) {  // leave header at [0] (when using header, not used
+            if(myDataset.isNotEmpty()) {  // leave header at [0] (when using header, not used
                 myDataset.removeAt(myDataset.size-1)  // last
                 recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
-
+            // !! TESTING !!
+            //val s = toSavo("voi")
+            //print (s)
         }
 
         // reset
         btnDelete.setOnLongClickListener {
-            if(!myDataset.isEmpty()) {
+            if(myDataset.isNotEmpty()) {
                 val builder = AlertDialog.Builder(this)
 
                 with(builder)
@@ -465,10 +468,10 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
                     setTitle("Uusi lista")
                     setMessage("Haluatko tyhjentää listan?")
                     setPositiveButton(
-                        android.R.string.ok,
+                        string.ok,
                         DialogInterface.OnClickListener(function = positiveButtonClick)
                     )
-                    setNegativeButton(android.R.string.cancel, negativeButtonClick)
+                    setNegativeButton(string.cancel, negativeButtonClick)
                     //setNeutralButton("Maybe", neutralButtonClick)
                     show()
                 }
@@ -495,16 +498,15 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
         //if(myDataset.size>1) {  // leave header at [0]
             //myDataset.subList(1, myDataset.size).clear();  // last
-            myDataset.clear();  // last (using header)
+            myDataset.clear()  // last (using header)
             recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
             saveSharedPrefs()
         //}
-        Toast.makeText(applicationContext,
-            android.R.string.ok, Toast.LENGTH_SHORT).show()
+        makeText(applicationContext, string.ok, LENGTH_SHORT ).show()
     }
+
     private val negativeButtonClick = { _: DialogInterface, _: Int ->
-        Toast.makeText(applicationContext,
-            android.R.string.cancel, Toast.LENGTH_SHORT).show()
+        makeText(applicationContext, string.cancel, LENGTH_SHORT ).show()
     }
     /*
     private val neutralButtonClick = { _: DialogInterface, _: Int ->
@@ -517,21 +519,21 @@ class MainActivity : AppCompatActivity() , TextToSpeech.OnInitListener{
     */
     private fun promptSpeechInput() {
 
-        Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+        Intent(ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(
-                RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+                EXTRA_LANGUAGE_MODEL,
+                LANGUAGE_MODEL_FREE_FORM
             )
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "Sano lisättävä tuote\n(voit poistaa \"poista ...\") ")
+            putExtra(EXTRA_LANGUAGE, Locale.getDefault())
+            putExtra(EXTRA_PROMPT, "Sano lisättävä tuote\n(voit poistaa \"poista ...\") ")
         }.run {
             try {
                 startForResult.launch(this)
                 //startActivityForResult(this, REQ_CODE_SPEECH_INPUT)
             } catch (a: ActivityNotFoundException) {
-                Toast.makeText(
+                makeText(
                     applicationContext,"Sorry! Your device doesn't support speech input",
-                    Toast.LENGTH_SHORT
+                    LENGTH_SHORT
                 ).show()
             }
         }

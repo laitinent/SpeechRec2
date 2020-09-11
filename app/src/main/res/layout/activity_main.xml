@@ -32,7 +32,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="16sp"
             android:text="@string/btn_del"
-            android:tooltipText="PItkä panallus - tyhjennä lista"
+            android:tooltipText="Pitkä painallus - tyhjennä lista"
             app:layout_constraintEnd_toStartOf="@+id/btnSpeak"
             app:layout_constraintHorizontal_bias="0.511"
             app:layout_constraintStart_toEndOf="@+id/txtSpeechInput"

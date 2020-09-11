@@ -20,8 +20,8 @@ import androidx.recyclerview.widget.RecyclerView
 class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
-    private val TYPE_HEADER = 0
-    private val TYPE_ITEM = 1
+    private val HEADER = 0
+    private val ITEM = 1
    // recyclerView - position=0 -> header
    //              - position=1 -> list[0]
 
@@ -37,7 +37,7 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     override fun onCreateViewHolder(parent: ViewGroup,
                                     viewType: Int): RecyclerView.ViewHolder {
 
-        return if(viewType==TYPE_ITEM) {
+        return if(viewType==ITEM) {
             // create a new view
 
             val textView = LayoutInflater.from(parent.context)
@@ -47,7 +47,7 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
         } else {
             val textView = LayoutInflater.from(parent.context)
                 .inflate(R.layout.my_header_view, parent, false) as TextView
-            MyHeaderViewHolder(textView)
+            MyHeaderViewHolder(textView, myDataset.size)
         }
 
 //        return super.createViewHolder(parent,viewType)
@@ -69,7 +69,8 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
                // headerViewHolder.headerView.text = "Ostoslista"  // myDataset[position].title
             }
             is MyViewHolder -> apply {
-
+                // strikethrough collected shoppinglist items
+                // 1st line = header, that's why position-1
                 if (myDataset[position-1].collected) {
                     holder.textView.paintFlags =
                         holder.textView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -105,22 +106,22 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     }
 
     // Return the size of your dataset (invoked by the layout manager)
-    override fun getItemCount() = myDataset.size+1
+    override fun getItemCount() = myDataset.size +1
 
     //override fun getItemId(position: Int): Long = position.toLong()
 
     override fun getItemViewType(position: Int): Int {
         if (position == 0) {
-            return TYPE_HEADER
+            return HEADER
         }
-        return TYPE_ITEM
+        return ITEM
     }
 
-    class MyHeaderViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    class MyHeaderViewHolder(view: View, size: Int) : RecyclerView.ViewHolder(view) {
         val headerView: TextView = view as TextView
 
         init {
-
+            headerView.text = "Ostoslista "+ (if(size>0)size.toString() else "")
         }
     }
 
