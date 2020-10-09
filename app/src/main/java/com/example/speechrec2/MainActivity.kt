@@ -7,11 +7,9 @@ import android.app.Activity
 import android.content.*
 import android.os.Bundle
 import android.os.PersistableBundle
-import android.speech.RecognizerIntent
 import android.speech.RecognizerIntent.*
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.widget.Toast
 import android.widget.Toast.*
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -39,13 +37,12 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
     // grant permissions results handler
     private val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
         // Handle the returned result (=true/false)
-
     }
 
     // handle language recognition result
-    private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-        if (result.resultCode  == Activity.RESULT_OK) {
-            val resultdata = result.data?.getStringArrayListExtra(EXTRA_RESULTS)
+    private val startForResult = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { (resultCode, data) -> //: ActivityResult//result: ActivityResult ->
+        if (/*result.*/resultCode  == Activity.RESULT_OK) {
+            val resultdata = /*result.*/data?.getStringArrayListExtra(EXTRA_RESULTS)
             val wordOrig = resultdata?.get(0) ?:"NOT FOUND"
             val word = wordOrig.toLowerCase(Locale.getDefault())
             txtSpeechInput.text =  word //?: "NOT FOUND"
@@ -108,7 +105,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         var w = wordToConvert.toLowerCase(Locale.getDefault())
 
         // ENDINGS
-        if(w.endsWith("io")){
+        if(w.length > 3 && w.endsWith("io")){
             w = w.replace("io","ijo")
         }
 
@@ -138,6 +135,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
 
         if(w== "ei") { return "ee" }
+        if(w.substring(1,3)== "oi") { return w[0]+"o e" }
 
         //TODO: triple vowel: kauas -> kauvas
 
@@ -220,7 +218,14 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
 
         var s3=""    // define as var for later use
 
-        // kalaisa -> kalaesa
+        val middleMap: HashMap<String, String> = hashMapOf(
+            "ai" to "ae",
+            "au" to "aa",
+            "ea" to "ee",
+            "ei" to "ee"
+        )
+
+        /* kalaisa -> kalaesa
         s3="ai"
         w= convertInMiddle2(w, "ae",s3)
 
@@ -233,11 +238,28 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         w= convertInMiddle2(w, "ee",s3)
 
         s3="ei"
-        w= convertInMiddle2(w, "ee",s3)
+        w= convertInMiddle2(w, "ee",s3)  */
+
+        middleMap.forEach { (from, to) ->
+            w= convertInMiddle2(w, from, to)
+        }
+
 
         // TODO: more middle conversions
 
+
         // 1ST SYLLABLE VOWELS
+
+        val startMap: HashMap<String, String> = hashMapOf(
+            "aa" to "ua", "ai" to "ae", "au" to "aa",
+            "ee" to "ie", "ei" to "ee", "eu" to "eo",
+            "oi" to "oe ", "ou" to "oo",
+            "ui" to "ue", "yi" to "ye",
+            "äi" to "äe", "äy" to "ää", "ää" to "iä",
+            "öy" to "öö",
+        )
+
+        /*
         var s2="ua"
         w= convertInStart(w, "aa",s2)
         if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
@@ -293,24 +315,29 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         s2="öö"
         w= convertInStart(w, "öy",s2)
         if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
+*/
+        startMap.forEach { (from, to) ->
+            w= convertInStart(w, from, to)
+            if(w != wordToConvert)
+                return if(w.endsWith(to)) w+"h" else w //(!(from == "oi" && w.endsWith("oe"))) w+"h" else w
+        }
 
         return w
     }
 
     /**
      * Process 2 letters in start of word (1st or 2nd)
-     * @param wordToConvert - string to process
+     * @param word - string to process
      * @param s1 - template for modifying (2 chars)
      * @param s2 - replace string (2 chars)
      * @return - modified string, if match, original otrherwise
      */
-    private fun convertInStart(wordToConvert: String, s1: String, s2:String) :String {
-        var w=wordToConvert
-        if ((wordToConvert.length > 1 && wordToConvert.substring( 0, 2 ) == s1)
-                || (wordToConvert.length > 2 && wordToConvert.substring(1, 3) == s1))
+    private fun convertInStart(word: String, s1: String, s2:String) :String {
+        var w=word
+        if(isSubMatch(word, 1, s1) || isSubMatch(word, 2, s1))
+        //if ((word.length > 1 && word.substring( 0, 2 ) == s1) || (word.length > 2 && word.substring(1, 3) == s1))
         {
-            w = wordToConvert.replace(s1, s2)
+            w = word.replace(s1, s2)
         }
         return w
     }
@@ -340,21 +367,32 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
 
     /**
      * process 2 letters starting from 1nd, 3rd or 4th
-     * @param wordToConvert - string to process
+     * @param word - string to process
      * @param s1 - template for modifying (2 chars)
      * @param s2 - replace string (2 chars)
      * @return - modified string, if match, original otrherwise
      */
-    private fun convertInMiddle2(wordToConvert: String, s1: String, s2:String) :String {
-        var w=wordToConvert
-        if ((wordToConvert.length > 3 && wordToConvert.substring( 2,4 ) == s1)
-            || (wordToConvert.length > 4 && wordToConvert.substring(3,5) == s1)
-            || (wordToConvert.length > 5 && wordToConvert.substring(4,6) == s1))
+    private fun convertInMiddle2(word: String, s1: String, s2:String) :String {
+        var w=word
+        if (isSubMatch(word, 3, s1) ||
+            isSubMatch(word, 4, s1) ||
+            isSubMatch(word, 5, s1))
+            //|| (wordToConvert.length > 5 && wordToConvert.substring(4,6) == s1))
         {
-            w = wordToConvert.replace(s1, s2)
+            w = word.replace(s1, s2)
         }
         return w
     }
+
+    /**
+     * does middle 2 chars match
+     * @param wordToConvert - word to search
+     * @param len - index to search
+     * @param s1 - search template
+     * @returns true if match found
+     */
+    private fun isSubMatch(wordToConvert: String, len:Int, s1: String) =
+        (len>0 && wordToConvert.length > len && wordToConvert.substring(len-1, len+1) == s1)
 
     /**
      * search triple consecutive vowels in text
@@ -607,5 +645,8 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
         super.onActivityResult(requestCode, resultCode, data)
     }*/
-
+    operator fun ActivityResult.component1() = resultCode
+    operator fun ActivityResult.component2() = data
 }
+
+
