@@ -2,24 +2,30 @@ package com.example.speechrec2
 
 
 import android.Manifest
-import android.R.*
+import android.R.string
 import android.app.Activity
-import android.content.*
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.DialogInterface
+import android.content.Intent
 import android.os.Bundle
 import android.os.PersistableBundle
 import android.speech.RecognizerIntent.*
 import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
-import android.widget.Toast.*
+import android.widget.Toast.LENGTH_SHORT
+import android.widget.Toast.makeText
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.speechrec2.databinding.ActivityMainBinding
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.android.synthetic.main.activity_main.*
+import com.squareup.moshi.Moshi
+//import kotlinx.android.synthetic.main.activity_main.*
 import java.util.*
 
 /**
@@ -33,6 +39,11 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
     private lateinit var viewManager: RecyclerView.LayoutManager
     //private val strFirst="Ostoslista"
     private var myDataset = arrayListOf<ShoppingListItem>()
+    private lateinit var moshi: Moshi
+    private lateinit var binding: ActivityMainBinding
+
+
+    val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type // for sharedprefs
 
     // grant permissions results handler
     private val getContent = registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
@@ -45,19 +56,20 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             val resultdata = /*result.*/data?.getStringArrayListExtra(EXTRA_RESULTS)
             val wordOrig = resultdata?.get(0) ?:"NOT FOUND"
             val word = wordOrig.toLowerCase(Locale.getDefault())
-            txtSpeechInput.text =  word //?: "NOT FOUND"
+            binding.txtSpeechInput.text =  word //?: "NOT FOUND"
 
             if(word.startsWith("poista"))
             {
                 // removeAt
                 val words = word.split(" ")
                 if(words.size>1) {
+                    // words[0] = "poista"
                     val itemToRemove = ShoppingListItem(words[1])   // collected defaults false
                     val checkedItemToRemove = ShoppingListItem(words[1], true)
-                    if (!myDataset.remove(itemToRemove)) {
-                        myDataset.remove(checkedItemToRemove)
-                    }
-                    viewAdapter.notifyDataSetChanged()
+
+                    //if (!myDataset.remove(itemToRemove)) { myDataset.remove(checkedItemToRemove) }
+                    if(myDataset.remove(itemToRemove) || myDataset.remove(checkedItemToRemove))
+                        viewAdapter.notifyDataSetChanged()
                 }
             }
             else {
@@ -74,19 +86,19 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
                     // item not collected?
                     var index = myDataset.indexOf(item)
                     // item already collected?
-                    if (index == -1) {
-                        index = myDataset.indexOf(checkedItem)
-                    }
+                    if (index == -1) { index = myDataset.indexOf(checkedItem) }
                     // reverse collected status
                     myDataset[index].collected = checkedItem !in myDataset
                     viewAdapter.notifyItemChanged(index)
                 }
 
-                val words = word.split(" ")
+                //val words = word.split(" ")
                 var savoWords = ""
                 //if(words.size>1) {
                 // translate each word
-                    for(w in words) savoWords += (toSavo(w) + " ")
+                word.split(" ").forEach { w ->
+                    savoWords += (toSavo(w) + " ")
+                }
                 // output whole sentence
                 speakOut(savoWords)
                // }
@@ -94,9 +106,9 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
     }
 
-    private val vowels=arrayOf('a','e','i','o','u','y','ä','ö')
+    private val vowels=arrayOf('a', 'e', 'i', 'o', 'u', 'y', 'ä', 'ö')
 
-    private fun toSavo(wordToConvert :String) : String
+    private fun toSavo(wordToConvert: String) : String
     {
         //TODO: all rules from config file
         //TODO: second syllable au -> aa etc.
@@ -106,7 +118,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
 
         // ENDINGS
         if(w.length > 3 && w.endsWith("io")){
-            w = w.replace("io","ijo")
+            w = w.replace("io", "ijo")
         }
 
 
@@ -135,7 +147,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
 
         if(w== "ei") { return "ee" }
-        if(w.substring(1,3)== "oi") { return w[0]+"o e" }
+        if(w.substring(1, 3)== "oi") { return w[0]+"o e" }
 
         //TODO: triple vowel: kauas -> kauvas
 
@@ -143,7 +155,8 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         if(index3 > -1 && !w.contains("aaa"))   // vaa'an
         {
            w=if(w[index3 + 1]=='i') {
-               w.substring(0, index3) + "j"+ w.substring(index3, w.length)
+               //w.substring(0, index3) + "j"+ w.substring(index3, w.length)
+               w.take(index3) + "j"+ w.substring(index3, w.length)
            }
             else
            {
@@ -156,38 +169,43 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             val index4 = indexOfVCVV(w)
             if (index4 > -1) {
                 // double the consonant (w[index4+1])
-                w = w.substring(0, index4+1) + w[index4+1] + w.substring(index4+1, w.length)
+                w = w.substring(0, index4 + 1) + w[index4 + 1] + w.substring(index4 + 1, w.length)
             }
         }
 
 
-        if(w.length>3 && w.endsWith("i") && w[w.length-2] != 'k' && w[w.length-2] != 'r'){
-            w = w.substring(0, w.length-1) + "j"
+        if(w.length>3 && w.endsWith("i") && w[w.length - 2] != 'k' && w[w.length - 2] != 'r'){
+            //w = w.substring(0, w.length - 1) + "j"
+            w = w.take(w.length - 1) + "j"
         }
 
         // pyöreä -> pyöree
         if(w.endsWith("ea") || w.endsWith("eä") ){
-            w = w.substring(0, w.length-2) + "ee"
+            //w = w.substring(0, w.length - 2) + "ee"
+            w = w.take(w.length - 2) + "ee"
         }
         else {
             // halpaa->halpoo (actually -> halapoo)
             if (w.endsWith("a") && w[w.length - 2] != 'i' && vowels.contains(w[w.length - 2])) {
-                w = w.substring(0, w.length - 2) + "oo"
+                //w = w.substring(0, w.length - 2) + "oo"
+                w = w.take(w.length - 2) + "oo"
             }
         }
 
+        /* onko sama kuin edellä
         if(w.endsWith("ea") ){
-            w = w.substring(0, w.length-2) + "ee"
-        }
+            //w = w.substring(0, w.length - 2) + "ee"
+            w = w.take( w.length - 2) + "ee"
+        } */
 
         // kalkkuna -> kalakkuna
-        for(s in arrayOf("lh","lj","lk","lm","lp","lv","nh")) {
+        for(s in arrayOf("lh", "lj", "lk", "lm", "lp", "lv", "nh")) {
             w = convertInMiddle(w, s)
         }
 
         // diana -> tiana TODO: ends
         if(w.startsWith("d", true)){
-            w = "t"+ w.substring(1, w.length-1)
+            w = "t"+ w.substring(1, w.length - 1)
         }
 
         // no double consonant on start: kristus -> ristus
@@ -195,18 +213,16 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             w = if(w[1]=='h') {
                 w[0]+ w.substring(2, w.length)  // shekki -> sekki
             }
-            else
-            {
-                w.substring(1, w.length)
-            }
+            else  {  w.substring(1, w.length)  }
         }
 
         // D and B replaced always
         // käden -> käen
         val index = w.indexOf("d")
-        if(index>0 && index < w.length-1){
-            val i1 = w[index-1]
-            w = if(/* w[index-1]=='u' || */ w[index+1]=='u') {
+        if(index in 1 until w.length){
+        //if(index>0 && index < w.length-1){
+            //val i1 = w[index - 1]
+            w = if(/* w[index-1]=='u' || */ w[index + 1]=='u') {
                 w.replace("d", "v")
             } else {
                 w.replace("d", "")
@@ -216,7 +232,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         w= w.replace("b", "p")
 
 
-        var s3=""    // define as var for later use
+        //var s3=""    // define as var for later use
 
         val middleMap: HashMap<String, String> = hashMapOf(
             "ai" to "ae",
@@ -244,8 +260,8 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             w= convertInMiddle2(w, from, to)
         }
 
-
         // TODO: more middle conversions
+        // --------------------------------
 
 
         // 1ST SYLLABLE VOWELS
@@ -332,7 +348,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * @param s2 - replace string (2 chars)
      * @return - modified string, if match, original otrherwise
      */
-    private fun convertInStart(word: String, s1: String, s2:String) :String {
+    private fun convertInStart(word: String, s1: String, s2: String) :String {
         var w=word
         if(isSubMatch(word, 1, s1) || isSubMatch(word, 2, s1))
         //if ((word.length > 1 && word.substring( 0, 2 ) == s1) || (word.length > 2 && word.substring(1, 3) == s1))
@@ -351,16 +367,20 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
     private fun convertInMiddle(wordToConvert: String, s1: String) :String {
         var w=wordToConvert // to mutable
         if (s1.length >1 && wordToConvert.length > 3) {
-
-            // double preceding vowel : kalja -> kalaja
-            if (wordToConvert.substring(1, 3) == s1 && vowels.contains(wordToConvert[0])) {
-                w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[0] + s1[1])
-            }
-
-            if (wordToConvert.substring(2, 4) == s1 && vowels.contains(wordToConvert[1])) {
-                w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[1] + s1[1])
-            }
-
+            (0..1)
+                // double preceding vowel : kalja -> kalaja
+                .forEach { i ->
+                    //if (wordToConvert.substring(1, 3) == s1 && vowels.contains(wordToConvert[0])) {
+                    if (wordToConvert.substring(i+1, i+3) == s1 && vowels.contains(wordToConvert[i])) {
+                        //w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[0] + s1[1])
+                        w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[i] + s1[1])
+                    }
+/*
+                    if (wordToConvert.substring(2, 4) == s1 && vowels.contains(wordToConvert[1])) {
+                        w = wordToConvert.replace(s1, s1[0].toString() + wordToConvert[1] + s1[1])
+                    }
+                    */
+                }
         }
         return w
     }
@@ -372,15 +392,22 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * @param s2 - replace string (2 chars)
      * @return - modified string, if match, original otrherwise
      */
-    private fun convertInMiddle2(word: String, s1: String, s2:String) :String {
+    private fun convertInMiddle2(word: String, s1: String, s2: String) :String {
         var w=word
+
+        var matches =false
+        (3..5).forEach { i -> if(isSubMatch(word, i, s1)) matches=true  }
+
+        if(matches){ w = word.replace(s1, s2)}
+
+        /*
         if (isSubMatch(word, 3, s1) ||
             isSubMatch(word, 4, s1) ||
             isSubMatch(word, 5, s1))
             //|| (wordToConvert.length > 5 && wordToConvert.substring(4,6) == s1))
         {
             w = word.replace(s1, s2)
-        }
+        }*/
         return w
     }
 
@@ -391,20 +418,22 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * @param s1 - search template
      * @returns true if match found
      */
-    private fun isSubMatch(wordToConvert: String, len:Int, s1: String) =
-        (len>0 && wordToConvert.length > len && wordToConvert.substring(len-1, len+1) == s1)
+    private fun isSubMatch(wordToConvert: String, len: Int, s1: String) =
+        (len in 1 until wordToConvert.length && wordToConvert.substring(len - 1, len + 1) == s1)
+        //(len>0 && wordToConvert.length > len && wordToConvert.substring(len-1, len+1) == s1)
 
     /**
      * search triple consecutive vowels in text
      * @param w - word to search
      * @returns index of first occurrence
      */
-    private fun indexOfTripleVowel(w:String):Int
+    private fun indexOfTripleVowel(w: String):Int
     {
-        for (index in 0 .. w.length-3)
-        if(vowels.contains(w[index]) && vowels.contains(w[index+1]) && vowels.contains(w[index+2]))
-        {
-            return index
+        for (index in 0 .. w.length-3) {
+            if( w[index] in vowels  && w[index + 1] in vowels && w[index + 2] in vowels) {
+            //if (vowels.contains(w[index]) && vowels.contains(w[index + 1]) && vowels.contains(w[index + 2])) {
+                return index
+            }
         }
         return -1
     }
@@ -414,37 +443,43 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * @param w - word to search
      * @returns index of first occurrence
      */
-    private fun indexOfVCVV(w:String):Int
+    private fun indexOfVCVV(w: String):Int
     {
         for (index in 0 .. w.length-4) {
             if (index == 0 || !vowels.contains(w[index - 1])) {
                 if (vowels.contains(w[index]) && !vowels.contains(w[index + 1]) && vowels.contains(w[index + 2]) && vowels.contains(
                         w[index + 3]
                     )
-                ) {
-                    return index
-                }
+                ) { return index }
             }
         }
         return -1
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        val view = binding.root
+        setContentView(view)//R.layout.activity_main)
 
+        moshi = Moshi.Builder()
+            //.add(KotlinJsonAdapterFactory()
+                .build()
+        //val listMyData: Type = Types.newParameterizedType( MutableList::class.java, ShoppingListItem::class.java  )
+        //var adapter: JsonAdapter<List<MyData?>?>? = moshi.adapter<Any?>(listMyData)
+        //val jsonAdapter: JsonAdapter<ArrayList<ShoppingListItem>> = moshi.adapter<Any>(BlackjackHand::class.java)
         //if(savedInstanceState != null) {
             try {
                 // list was saved as JSON string
-                val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
-                //myDataset.addAll(
-                val data =
-                    Gson().fromJson<ArrayList<ShoppingListItem>>(
-                    savedInstanceState?.getString("lista"), type
-                )
+                //val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
+                myDataset.addAll(
+                /*val data =*/ Gson().fromJson<ArrayList<ShoppingListItem>>(
+                        savedInstanceState?.getString("lista"), type)
+                    )
 
                 //if (
-                    myDataset.addAll(data)    // using header
+                //myDataset.addAll(data)    // using header
                 /*){
                     myDataset.removeAt(0)
                     viewAdapter.notifyItemRemoved(0)
@@ -458,19 +493,20 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         viewManager = LinearLayoutManager(this)
         viewAdapter = MyAdapter(myDataset)
 
-        recyclerView.apply {
+        binding.recyclerView.apply {
             layoutManager = viewManager
             adapter = viewAdapter
         }
 
+        tts = TextToSpeech(this, this)
+
         // speech & text-to-speech
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-            txtSpeechInput.text = "No voice recognition support on your device!"
+            binding.txtSpeechInput.text = getString(R.string.txt_no_support)
         }
 
         getContent.launch(Manifest.permission.RECORD_AUDIO)
 
-        tts = TextToSpeech(this, this)
 
 /*      replaced my new androidx.activity:activity-ktx
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -481,14 +517,12 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
 
         // Buttons
         // Listen and add
-        btnSpeak.setOnClickListener {
-           promptSpeechInput()
-        }
+        binding.btnSpeak.setOnClickListener { promptSpeechInput() }
         // undo add
-        btnDelete.setOnClickListener {
+        binding.btnDelete.setOnClickListener {
             if(myDataset.isNotEmpty()) {  // leave header at [0] (when using header, not used
-                myDataset.removeAt(myDataset.size-1)  // last
-                recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
+                myDataset.removeLast() //removeAt(myDataset.size - 1)  // last
+                binding.recyclerView.adapter?.notifyItemRemoved(myDataset.size) // note. size, not size-1
             }
             // TODO: should this undo strike through (now repeated same item toggles)
             // !! TESTING !!
@@ -497,7 +531,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
 
         // reset
-        btnDelete.setOnLongClickListener {
+        binding.btnDelete.setOnLongClickListener {
             if(myDataset.isNotEmpty()) {
                 val builder = AlertDialog.Builder(this)
 
@@ -521,36 +555,32 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
 
     public override fun onDestroy() {
         // Shutdown TTS
-        if (tts != null) {
-            tts!!.stop()
-            tts!!.shutdown()
-        }
+        tts.stop()
+        tts.shutdown()
         super.onDestroy()
     }
 
     private fun speakOut(text: String) {
         //val text = editText!!.text.toString()
-        tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null,"") // was QUEUE_FLUSH
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "") // was QUEUE_FLUSH
     }
 
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
         //if(myDataset.size>1) {  // leave header at [0]
             //myDataset.subList(1, myDataset.size).clear();  // last
             myDataset.clear()  // last (using header)
-            recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
+        binding.recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
             saveSharedPrefs()
         //}
-        makeText(applicationContext, string.ok, LENGTH_SHORT ).show()
+        makeText(applicationContext, string.ok, LENGTH_SHORT).show()
     }
 
     private val negativeButtonClick = { _: DialogInterface, _: Int ->
-        makeText(applicationContext, string.cancel, LENGTH_SHORT ).show()
+        makeText(applicationContext, string.cancel, LENGTH_SHORT).show()
     }
-    /*
-    private val neutralButtonClick = { _: DialogInterface, _: Int ->
-        Toast.makeText(applicationContext,
-            "Maybe", Toast.LENGTH_SHORT).show()
-    }*/
+
+    /* private val neutralButtonClick = { _: DialogInterface, _: Int ->
+        Toast.makeText(applicationContext, "Maybe", Toast.LENGTH_SHORT).show() } */
 
     /**
      * Showing google speech input dialog
@@ -570,7 +600,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
                 //startActivityForResult(this, REQ_CODE_SPEECH_INPUT)
             } catch (a: ActivityNotFoundException) {
                 makeText(
-                    applicationContext,"Sorry! Your device doesn't support speech input",
+                    applicationContext, getString(R.string.txtNotSupported),
                     LENGTH_SHORT
                 ).show()
             }
@@ -578,9 +608,8 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
     }
 
     override fun onSaveInstanceState(outState: Bundle, outPersistentState: PersistableBundle) {
-        outState.putString("lista",Gson().toJson(myDataset))
+        outState.putString("lista", Gson().toJson(myDataset))
         super.onSaveInstanceState(outState, outPersistentState)
-
     }
 
     override fun onPause() {
@@ -591,22 +620,22 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
     private fun saveSharedPrefs() {
         val sharedPref = getPreferences(Context.MODE_PRIVATE)
         val editor = sharedPref.edit()
-        editor.putString("SavedLista", Gson().toJson(myDataset))
-        editor.apply()
+        with(editor)
+        {
+            putString("SavedLista", Gson().toJson(myDataset))
+            apply()
+        }
     }
 
     override fun onResume() {
         super.onResume()
         val sharedPref = getPreferences(Context.MODE_PRIVATE)
         try {
-            val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
+            //val type = object : TypeToken<ArrayList<ShoppingListItem>>() {}.type
             val data = Gson().fromJson<ArrayList<ShoppingListItem>>(
-                sharedPref?.getString("SavedLista",""),
-                type
-            )
+                sharedPref?.getString("SavedLista", ""), type  )
             // restore only if reset
             if(myDataset.isEmpty()) {   // was <=1 before header
-
                 //if (
                     myDataset.addAll(data)
                             /*&& myDataset.size > 1) {
@@ -619,10 +648,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
                 }*/
             }
         }
-        catch(ex: Exception){
-            print(ex.message)
-        }
-
+        catch (ex: Exception){ print(ex.message) }
     }
 
     override fun onInit(p0: Int) {

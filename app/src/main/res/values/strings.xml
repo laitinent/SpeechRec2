@@ -3,4 +3,6 @@
     <string name="btn_add">Lisää</string>
     <string name="btn_del">Poista</string>
     <string name="txtHeader">Ostoslista</string>
+    <string name="txt_no_support">No voice recognition support on your device!</string>
+    <string name="txtNotSupported">Sorry! Your device doesn\'t support speech input</string>
 </resources>

@@ -25,13 +25,11 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
    // recyclerView - position=0 -> header
    //              - position=1 -> list[0]
 
-
     // Provide a reference to the views for each data item
     // Complex data items may need more than one view per item, and
     // you provide access to all the views for a data item in a view holder.
     // Each data item is just a string in this case that is shown in a TextView.
     class MyViewHolder(val textView: TextView) : RecyclerView.ViewHolder(textView)
-
 
     // Create new views (invoked by the layout manager)
     override fun onCreateViewHolder(parent: ViewGroup,
@@ -39,7 +37,6 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
 
         return if(viewType==ITEM) {
             // create a new view
-
             val textView = LayoutInflater.from(parent.context)
                 .inflate(R.layout.my_text_view, parent, false) as TextView
             // set the view's size, margins, paddings and layout parameters
@@ -49,7 +46,6 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
                 .inflate(R.layout.my_header_view, parent, false) as TextView
             MyHeaderViewHolder(textView, myDataset.size)
         }
-
 //        return super.createViewHolder(parent,viewType)
     }
 
@@ -59,8 +55,8 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
         // - replace the contents of the view with that element
         when(holder) {
             is MyHeaderViewHolder -> apply {
-                val headerViewHolder:MyHeaderViewHolder = holder
-                /*
+                /*val headerViewHolder:MyHeaderViewHolder = holder
+
                 if (myDataset[position].collected) {
                     holder.headerView.paintFlags =
                         holder.headerView.paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -111,9 +107,7 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     //override fun getItemId(position: Int): Long = position.toLong()
 
     override fun getItemViewType(position: Int): Int {
-        if (position == 0) {
-            return HEADER
-        }
+        if (position == 0) { return HEADER }
         return ITEM
     }
 
