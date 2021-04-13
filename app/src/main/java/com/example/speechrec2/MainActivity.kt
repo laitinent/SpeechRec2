@@ -106,7 +106,15 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         }
     }
 
+    fun isVowel(ch: Char): Boolean {
+        return when (ch) {
+            'a', 'e', 'i', 'o', 'u', 'y', 'å', 'ä', 'ö' -> true
+            else -> false
+        }
+    }
+
     private val vowels=arrayOf('a', 'e', 'i', 'o', 'u', 'y', 'ä', 'ö')
+
 
     private fun toSavo(wordToConvert: String) : String
     {
@@ -146,7 +154,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             return w
         }
 
-        if(w== "ei") { return "ee" }
+        if(w == "ei") { return "ee" }
         if(w.substring(1, 3)== "oi") { return w[0]+"o e" }
 
         //TODO: triple vowel: kauas -> kauvas
@@ -173,7 +181,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             }
         }
 
-
+        // to force pronounciation, add j as last
         if(w.length>3 && w.endsWith("i") && w[w.length - 2] != 'k' && w[w.length - 2] != 'r'){
             //w = w.substring(0, w.length - 1) + "j"
             w = w.take(w.length - 1) + "j"
@@ -208,8 +216,11 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
             w = "t"+ w.substring(1, w.length - 1)
         }
 
+        // ff-> hv
+
         // no double consonant on start: kristus -> ristus
-        if(!vowels.contains(w[0]) && !vowels.contains(w[1])){
+        //if(!vowels.contains(w[0]) && !vowels.contains(w[1])){
+        if(!isVowel(w[0]) && !isVowel(w[1])){
             w = if(w[1]=='h') {
                 w[0]+ w.substring(2, w.length)  // shekki -> sekki
             }
@@ -346,7 +357,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * @param word - string to process
      * @param s1 - template for modifying (2 chars)
      * @param s2 - replace string (2 chars)
-     * @return - modified string, if match, original otrherwise
+     * @return - modified string, if match, original otherwise
      */
     private fun convertInStart(word: String, s1: String, s2: String) :String {
         var w=word
@@ -362,7 +373,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
      * process 2 letters starting from 2nd or 3rd
      * @param wordToConvert - string to process
      * @param s1 - template for modifying (2 chars)
-     * @return - modified string, if match, original otrherwise
+     * @return - modified string, if match, original otherwise
      */
     private fun convertInMiddle(wordToConvert: String, s1: String) :String {
         var w=wordToConvert // to mutable
@@ -398,7 +409,7 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/) , TextToSpeec
         var matches =false
         (3..5).forEach { i -> if(isSubMatch(word, i, s1)) matches=true  }
 
-        if(matches){ w = word.replace(s1, s2)}
+        if(matches){ w = word.replace(s1, s2) }
 
         /*
         if (isSubMatch(word, 3, s1) ||

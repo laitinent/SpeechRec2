@@ -3,13 +3,15 @@ apply plugin: 'kotlin-android'
 //apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion("android-S")
-    buildToolsVersion '31.0.0 rc1'
+    compileSdkVersion "android-S"
+    buildToolsVersion '31.0.0 rc2'
+
+    kotlinOptions.useIR = true
 
     defaultConfig {
         applicationId "com.example.speechrec2"
-        minSdkVersion 24
-        targetSdkVersion("S")
+        minSdkVersion 26
+        targetSdkVersion "S"
         versionCode 1
         versionName "1.0"
 
@@ -33,20 +35,20 @@ android {
 }
 
 dependencies {
-    def activity_version = '1.3.0-alpha02'
+    def activity_version = '1.3.0-alpha03'
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${kotlin_version}"
-    implementation 'androidx.appcompat:appcompat:1.3.0-beta01'
-    implementation 'androidx.core:core-ktx:1.5.0-beta01'
-    implementation 'androidx.constraintlayout:constraintlayout:2.1.0-alpha2'
-    implementation "androidx.activity:activity-ktx:${activity_version}"
-    implementation 'androidx.fragment:fragment-ktx:1.3.0'
-    implementation 'com.google.android.material:material:1.3.0'
+    implementation 'androidx.appcompat:appcompat:1.3.0-rc01'
+    implementation 'androidx.core:core-ktx:1.6.0-alpha01'
+    implementation 'androidx.constraintlayout:constraintlayout:2.1.0-beta01'
+    implementation "androidx.activity:activity-ktx:1.3.0-alpha06"
+    implementation 'androidx.fragment:fragment-ktx:1.3.2'
+    implementation 'com.google.android.material:material:1.4.0-alpha02'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.3-alpha04'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0-alpha04'
-    implementation 'androidx.recyclerview:recyclerview:1.2.0-beta01'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.3-alpha05'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0-alpha05'
+    implementation 'androidx.recyclerview:recyclerview:1.2.0'
     implementation 'com.google.code.gson:gson:2.8.6'
-    implementation 'com.squareup.moshi:moshi:1.11.0'
-    //implementation 'androidx.recyclerview:recyclerview-selection:1.1.0-rc03'
+    implementation 'com.squareup.moshi:moshi:1.12.0'
+    //implementation 'androidx.recyclerview:recyclerview-selection:1.2.0'
 }
