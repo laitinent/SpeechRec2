@@ -112,7 +112,7 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     }
 
     class MyHeaderViewHolder(view: View, size: Int) : RecyclerView.ViewHolder(view) {
-        val headerView: TextView = view as TextView
+        private val headerView: TextView = view as TextView
 
         init {
             headerView.text = "Ostoslista "+ (if(size>0)size.toString() else "")

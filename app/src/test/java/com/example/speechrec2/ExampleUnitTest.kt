@@ -14,9 +14,9 @@ class ExampleUnitTest {
     fun addition_isCorrect() {
         assertEquals(4, 2 + 2)
     }
-/*
+
     @Test
     fun toSavo_isCorrect() {
-        assertEquals("naenen",MainActivity().toSavo("nainen"))
-    }*/
+        assertEquals("naenen",SavoConverter.toSavo("nainen"))
+    }
 }
