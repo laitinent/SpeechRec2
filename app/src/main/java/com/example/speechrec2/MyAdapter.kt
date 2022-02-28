@@ -1,13 +1,11 @@
 package com.example.speechrec2
 
-
 import android.graphics.Paint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
-
 
 /**
  * @seealso https://www.skcript.com/svr/how-to-add-header-to-recyclerview-in-android/
@@ -35,7 +33,7 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     override fun onCreateViewHolder(parent: ViewGroup,
                                     viewType: Int): RecyclerView.ViewHolder {
 
-        return if(viewType==ITEM) {
+        return if(viewType == ITEM) {
             // create a new view
             val textView = LayoutInflater.from(parent.context)
                 .inflate(R.layout.my_text_view, parent, false) as TextView
@@ -105,11 +103,13 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
     override fun getItemCount() = myDataset.size +1
 
     //override fun getItemId(position: Int): Long = position.toLong()
-
+/*
     override fun getItemViewType(position: Int): Int {
         if (position == 0) { return HEADER }
         return ITEM
     }
+*/
+    override fun getItemViewType(position: Int) = when(position){ 0 -> HEADER else -> ITEM }
 
     class MyHeaderViewHolder(view: View, size: Int) : RecyclerView.ViewHolder(view) {
         private val headerView: TextView = view as TextView
@@ -118,6 +118,5 @@ class MyAdapter (private val myDataset: ArrayList<ShoppingListItem>) :
             headerView.text = "Ostoslista "+ (if(size>0)size.toString() else "")
         }
     }
-
 
 }

@@ -1,5 +1,7 @@
 package com.example.speechrec2
 
+import androidx.compose.ui.text.toLowerCase
+import java.lang.StringBuilder
 import java.util.*
 
 class SavoConverter {
@@ -24,13 +26,17 @@ class SavoConverter {
             //TODO: second syllable au -> aa etc.
             // TODO: olla
 
-            var w = wordToConvert.toLowerCase(Locale.getDefault())
 
+            var w = wordToConvert.toLowerCase(Locale.getDefault())
+            var wsb = StringBuilder(w)  // V2: use StringBuilder
             // ENDINGS
             if(w.length > 3 && w.endsWith("io")){
                 w = w.replace("io", "ijo")
             }
-
+            //V2
+            if(wsb.length > 3 && wsb.endsWith("io")){
+                wsb.replaceFirst(Regex("io"), "ijo")
+            }
 
             // hämmentää -> hämmentee, hätää-> hättee
             if(w.endsWith("tää")) {
@@ -40,6 +46,15 @@ class SavoConverter {
                     w.replace("tää", "ttee")
                 }
             }
+            // V2
+            if(wsb.endsWith("tää")) {
+                if (wsb.endsWith("ntää")) {
+                    wsb.replaceFirst(Regex("ntää"), "ntee")
+                } else {
+                    wsb.replaceFirst(Regex("tää"), "ttee")
+                }
+            }
+
 
             // odottaa -> odottoo (-> oottoo)
             if(w.endsWith("taa")) {
@@ -52,12 +67,11 @@ class SavoConverter {
 
             // olen -> oon
             if(w.startsWith("ole", true) && !w.startsWith("olento")){
-                w = w.replace("ole", "oo")
-                return w
+                return w.replace("ole", "oo")  // ready
             }
 
             if(w == "ei") { return "ee" }
-            if(w.substring(1, 3)== "oi") { return w[0]+"o e" }
+            if(w.substring(1, 3)== "oi") { return w[0]+"o e" } // pronounce correct
 
             //TODO: triple vowel: kauas -> kauvas
 
@@ -148,26 +162,12 @@ class SavoConverter {
             //var s3=""    // define as var for later use
 
             val middleMap: HashMap<String, String> = hashMapOf(
-                "ai" to "ae",
-                "au" to "aa",
-                "ea" to "ee",
+                "ai" to "ae", // kalaisa -> kalaesa
+                "au" to "aa", // kolaus -> kollaas
+                "ea" to "ee", // kolea -> kollee
                 "ei" to "ee"
             )
 
-            /* kalaisa -> kalaesa
-            s3="ai"
-            w= convertInMiddle2(w, "ae",s3)
-
-            // kolaus -> kollaas
-            s3="au"
-            w= convertInMiddle2(w, "aa",s3)
-
-            // kolea -> kollee
-            s3="ea"
-            w= convertInMiddle2(w, "ee",s3)
-
-            s3="ei"
-            w= convertInMiddle2(w, "ee",s3)  */
 
             middleMap.forEach { (from, to) ->
                 w= convertInMiddle2(w, from, to)
@@ -188,69 +188,12 @@ class SavoConverter {
                 "öy" to "öö",
             )
 
-            /*
-            var s2="ua"
-            w= convertInStart(w, "aa",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
 
-            s2="ae"
-            w= convertInStart(w, "ai",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="aa"
-            w= convertInStart(w, "au",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="ie"
-            w= convertInStart(w, "ee",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="ee"
-            w= convertInStart(w, "ei",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="eo"
-            w= convertInStart(w, "eu",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="oe"
-            w= convertInStart(w, "oi",s2) // TODO: does it work ("voi"->"voi" mutta "voit"-> "voet")
-            if(w != wordToConvert) return w //if(w.endsWith(s2)) w+"h" else w
-
-            s2="oo"
-            w= convertInStart(w, "ou",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="ue"
-            w= convertInStart(w, "ui",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="ye"
-            w= convertInStart(w, "yi",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="äe"
-            w= convertInStart(w, "äi",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="ää"
-            w= convertInStart(w, "äy",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="iä"
-            w= convertInStart(w, "ää",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-
-            s2="öö"
-            w= convertInStart(w, "öy",s2)
-            if(w != wordToConvert) return if(w.endsWith(s2)) w+"h" else w
-    */
             startMap.forEach { (from, to) ->
                 w= convertInStart(w, from, to)
                 if(w != wordToConvert)
                     return if(w.endsWith(to)) w+"h" else w //(!(from == "oi" && w.endsWith("oe"))) w+"h" else w
             }
-
             return w
         }
 
@@ -303,7 +246,7 @@ class SavoConverter {
          * @param word - string to process
          * @param s1 - template for modifying (2 chars)
          * @param s2 - replace string (2 chars)
-         * @return - modified string, if match, original otrherwise
+         * @return - modified string, if match, original otherwise
          */
         private fun convertInMiddle2(word: String, s1: String, s2: String) :String {
             var w=word
@@ -352,7 +295,7 @@ class SavoConverter {
         }
 
         /**
-         * search (none or consonent+) vowel+consonent+2xvowel  in text
+         * search (none or consonant+) vowel+consonant+2 x vowel  in text
          * @param w - word to search
          * @returns index of first occurrence
          */
@@ -369,4 +312,5 @@ class SavoConverter {
             return -1
         }
     }
+
 }
