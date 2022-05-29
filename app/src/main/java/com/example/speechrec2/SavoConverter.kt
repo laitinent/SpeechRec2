@@ -1,6 +1,6 @@
 package com.example.speechrec2
 
-import androidx.compose.ui.text.toLowerCase
+import androidx.core.text.isDigitsOnly
 import java.lang.StringBuilder
 import java.util.*
 
@@ -27,11 +27,12 @@ class SavoConverter {
             // TODO: olla
 
 
-            var w = wordToConvert.toLowerCase(Locale.getDefault())
-            var wsb = StringBuilder(w)  // V2: use StringBuilder
+            var w = wordToConvert.lowercase(Locale.getDefault())
+            if(w.isDigitsOnly()){ return ""}
+            val wsb = StringBuilder(w)  // V2: use StringBuilder
             // ENDINGS
             if(w.length > 3 && w.endsWith("io")){
-                w = w.replace("io", "ijo")
+                w = w.replace("io", "iijoh")
             }
             //V2
             if(wsb.length > 3 && wsb.endsWith("io")){
@@ -270,12 +271,12 @@ class SavoConverter {
         /**
          * does middle 2 chars match
          * @param wordToConvert - word to search
-         * @param len - index to search
+         * @param startIndex - index to search
          * @param s1 - search template
          * @returns true if match found
          */
-        private fun isSubMatch(wordToConvert: String, len: Int, s1: String) =
-            (len in 1 until wordToConvert.length && wordToConvert.substring(len - 1, len + 1) == s1)
+        private fun isSubMatch(wordToConvert: String, startIndex: Int, s1: String) =
+            (startIndex in 1 until wordToConvert.length && wordToConvert.substring(startIndex - 1, startIndex + 1) == s1)
         //(len>0 && wordToConvert.length > len && wordToConvert.substring(len-1, len+1) == s1)
 
         /**
@@ -292,6 +293,25 @@ class SavoConverter {
                 }
             }
             return -1
+        }
+
+        /**
+         * find list of double vowels in word
+         * @param word Input
+         * @return list of indexes where double vowel found
+         */
+        fun findDoubleVowel(word: String): List<Int> {
+            var list = mutableListOf<Int>()
+            var index=0
+            while (index <= word.length-2) {
+                if(isVowel(word[index])&& isVowel(word[index+1]))
+                {
+                    list.add(index)
+                    index++
+                }
+                index++
+            }
+            return list.toList()
         }
 
         /**

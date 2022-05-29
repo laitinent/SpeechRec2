@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.Button
 import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Snackbar
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -78,68 +79,75 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/), TextToSpeech
             if (/*result.*/resultCode == Activity.RESULT_OK) {
                 val resultdata = /*result.*/data?.getStringArrayListExtra(EXTRA_RESULTS)
                 val wordOrig = resultdata?.get(0) ?: "NOT FOUND"
-                val word = wordOrig.toLowerCase(Locale.getDefault())
-                binding.txtSpeechInput.text = word //?: "NOT FOUND"
-
-                if (word.startsWith("poista")) {
-                    // removeAt
-                    val words = word.split(" ")
-                    if (words.size > 1) {
-                        // words[0] = "poista"
-                        val itemToRemove = ShoppingListItem(words[1])   // collected defaults false
-                        val checkedItemToRemove = ShoppingListItem(words[1], true)
-
-                        //if (!myDataset.remove(itemToRemove)) { myDataset.remove(checkedItemToRemove) }
-                        if (myDataset.remove(itemToRemove) || myDataset.remove(checkedItemToRemove))
-                            viewAdapter.notifyDataSetChanged()
-                    }
-                } else {
-                    // Add
-                    val item = ShoppingListItem(word)   // collected defaults false
-                    val checkedItem = ShoppingListItem(word, true)
-                    // not on list, even checked version
-                    if (item !in myDataset && checkedItem !in myDataset) {
-                        myDataset.add(item)
-                        viewAdapter.notifyItemInserted(myDataset.size) // was - 1
-                        //viewAdapter.notifyDataSetChanged()
-                    } else {
-                        // already listed
-                        // item not collected?
-                        var index = myDataset.indexOf(item)
-                        // item already collected?
-                        if (index == -1) {
-                            index = myDataset.indexOf(checkedItem)
-                        }
-                        // reverse collected status
-                        myDataset[index].collected = checkedItem !in myDataset
-                        viewAdapter.notifyItemChanged(index)
-                    }
-
-                    //val words = word.split(" ")
-                    var savoWords = ""
-                    //if(words.size>1) {
-                    // translate each word
-                    word.split(" ").forEach { w ->
-                        savoWords += (SavoConverter.toSavo(w) + " ")
-                    }
-                    // output whole sentence
-                    speakOut(savoWords)
-                    // }
-                }
+                addItemToShoppingList(wordOrig)
             }
         }
+
+    /**
+     * Add item to shopping list or remove it, and speak out
+     */
+    private fun addItemToShoppingList(wordOrig: String) {
+        val word = wordOrig.lowercase(Locale.getDefault())
+        binding.txtSpeechInput.text = word //?: "NOT FOUND"
+
+        if (word.startsWith("poista")) {
+            // removeAt
+            val words = word.split(" ")
+            if (words.size > 1) {
+                // words[0] = "poista"
+                val itemToRemove = ShoppingListItem(words[1])   // collected defaults false
+                val checkedItemToRemove = ShoppingListItem(words[1], true)
+
+                //if (!myDataset.remove(itemToRemove)) { myDataset.remove(checkedItemToRemove) }
+                if (myDataset.remove(itemToRemove) || myDataset.remove(checkedItemToRemove))
+                    viewAdapter.notifyDataSetChanged()
+            }
+        } else {
+            // Add
+            val item = ShoppingListItem(word)   // collected defaults false
+            val checkedItem = ShoppingListItem(word, true)
+            // not on list, even checked version
+            if (item !in myDataset && checkedItem !in myDataset) {
+                myDataset.add(item)
+                //viewAdapter.notifyItemInserted(myDataset.size) // was - 1
+                viewAdapter.notifyDataSetChanged()
+            } else {
+                // already listed
+                // item not collected?
+                var index = myDataset.indexOf(item)
+                // item already collected?
+                if (index == -1) {
+                    index = myDataset.indexOf(checkedItem)
+                }
+                // reverse collected status
+                myDataset[index].collected = checkedItem !in myDataset
+                viewAdapter.notifyItemChanged(index)
+            }
+
+            //val words = word.split(" ")
+            var savoWords = ""
+            //if(words.size>1) {
+            // translate each word
+            word.split(" ").forEach { w ->
+                savoWords += (SavoConverter.toSavo(w) + " ")
+            }
+            // output whole sentence
+            speakOut(savoWords)
+            // }
+        }
+    }
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
-        //val view = binding.root
-        //setContentView(view)//R.layout.activity_main)
-        setContent {
+        val view = binding.root
+        setContentView(view)//R.layout.activity_main)
+        /*setContent {
             MaterialTheme {
                 Greeting(allItems = myDataset, tts)
             }
-        }
+        }*/
 
         moshi = Moshi.Builder()
             //.add(KotlinJsonAdapterFactory()
@@ -246,8 +254,10 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/), TextToSpeech
     private val positiveButtonClick = { _: DialogInterface, _: Int ->
         //if(myDataset.size>1) {  // leave header at [0]
         //myDataset.subList(1, myDataset.size).clear();  // last
+        var setSize = myDataset.size
         myDataset.clear()  // last (using header)
         binding.recyclerView.adapter?.notifyDataSetChanged() // note. size, not size-1
+        //binding.recyclerView.adapter?.notifyItemRangeRemoved(0, setSize)
         saveSharedPrefs()
         //}
         makeText(applicationContext, string.ok, LENGTH_SHORT).show()
@@ -260,27 +270,51 @@ class MainActivity : AppCompatActivity(/*R.layout.activity_main*/), TextToSpeech
     /* private val neutralButtonClick = { _: DialogInterface, _: Int ->
         Toast.makeText(applicationContext, "Maybe", Toast.LENGTH_SHORT).show() } */
 
+    private val positiveButtonClick2 = { _: DialogInterface, _: Int ->
+
+        addItemToShoppingList("Joku sana")
+        makeText(applicationContext, string.ok, LENGTH_SHORT).show()
+    }
+
     /**
      * Showing google speech input dialog
      */
     private fun promptSpeechInput() {
+        if(false)//BuildConfig.DEBUG)
+        {
+            val builder = AlertDialog.Builder(this)
 
-        Intent(ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(
-                EXTRA_LANGUAGE_MODEL,
-                LANGUAGE_MODEL_FREE_FORM
-            )
-            putExtra(EXTRA_LANGUAGE, Locale.getDefault())
-            putExtra(EXTRA_PROMPT, "Sano lisättävä tuote\n(voit poistaa \"poista ...\") ")
-        }.run {
-            try {
-                startForResult.launch(this)
-                //startActivityForResult(this, REQ_CODE_SPEECH_INPUT)
-            } catch (a: ActivityNotFoundException) {
-                makeText(
-                    applicationContext, getString(R.string.txtNotSupported),
-                    LENGTH_SHORT
-                ).show()
+            with(builder)
+            {
+                setTitle("Uusi lista")
+                setMessage("Haluatko tyhjentää listan?")
+                setPositiveButton(
+                    string.ok,
+                    DialogInterface.OnClickListener(function = positiveButtonClick2)
+                )
+                setNegativeButton(string.cancel, negativeButtonClick)
+                //setNeutralButton("Maybe", neutralButtonClick)
+                show()
+            }
+        }
+        else {
+            Intent(ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(
+                    EXTRA_LANGUAGE_MODEL,
+                    LANGUAGE_MODEL_FREE_FORM
+                )
+                putExtra(EXTRA_LANGUAGE, Locale.getDefault())
+                putExtra(EXTRA_PROMPT, "Sano lisättävä tuote\n(voit poistaa \"poista ...\") ")
+            }.run {
+                try {
+                    startForResult.launch(this)
+                    //startActivityForResult(this, REQ_CODE_SPEECH_INPUT)
+                } catch (a: ActivityNotFoundException) {
+                    makeText(
+                        applicationContext, getString(R.string.txtNotSupported),
+                        LENGTH_SHORT
+                    ).show()
+                }
             }
         }
     }
@@ -404,6 +438,7 @@ fun Greeting(allItems: ArrayList<ShoppingListItem>, tts: TextToSpeech?) {
             val launcher2 =
                 rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
                     //result.value = it
+
                 }
 
             Intent(ACTION_RECOGNIZE_SPEECH).apply {
@@ -424,7 +459,7 @@ fun Greeting(allItems: ArrayList<ShoppingListItem>, tts: TextToSpeech?) {
                 if (it.resultCode == Activity.RESULT_OK) {
                     val resultdata = it.data?.getStringArrayListExtra(EXTRA_RESULTS)
                     val wordOrig = resultdata?.get(0) ?: "NOT FOUND"
-                    val word = wordOrig.toLowerCase(Locale.getDefault())
+                    val word = wordOrig.lowercase(Locale.getDefault())
                     //binding.txtSpeechInput.text = word //?: "NOT FOUND"
 
                     if (word.startsWith("poista")) {

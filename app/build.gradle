@@ -3,15 +3,17 @@ apply plugin: 'kotlin-android'
 //apply plugin: 'kotlin-android-extensions'
 
 android {
-    compileSdkVersion 32
-    buildToolsVersion '33.0.0-rc2'
+    //compileSdkVersion 32
+    compileSdkPreview "Tiramisu"
+    buildToolsVersion '33.0.0-rc4'
 
     kotlinOptions.useIR = true
 
     defaultConfig {
         applicationId "com.example.speechrec2"
         minSdkVersion 29
-        targetSdk 32
+//        targetSdk 32
+        targetSdkPreview "Tiramisu"
         versionCode 1
         versionName "1.0"
 
@@ -45,12 +47,12 @@ android {
 
 dependencies {
     //def compose_version = '1.2.0-alpha05' // 02
-    def activity_version = '1.5.0-alpha03' // 02
+    def activity_version = '1.5.0-rc01' // 02
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"//1.4.32'
-    implementation 'androidx.compose.compiler:compiler:1.2.0-alpha07'
-    implementation 'androidx.appcompat:appcompat:1.6.0-alpha01'
-    implementation 'androidx.core:core-ktx:1.9.0-alpha02'
+    implementation 'androidx.compose.compiler:compiler:1.2.0-beta01'
+    implementation 'androidx.appcompat:appcompat:1.6.0-alpha03'
+    implementation 'androidx.core:core-ktx:1.9.0-alpha03'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.3'
     implementation "androidx.activity:activity-ktx:$activity_version"
     implementation "androidx.compose.ui:ui:$compose_version"
@@ -66,7 +68,7 @@ dependencies {
     // Integration with activities
     implementation "androidx.activity:activity-compose:$activity_version"
     // Integration with ViewModels
-    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.5.0-alpha06'
+    implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.5.0-rc01'
     // Integration with observables
     implementation "androidx.compose.runtime:runtime-livedata:$compose_version"
     implementation "androidx.compose.runtime:runtime-rxjava2:$compose_version"
@@ -75,10 +77,10 @@ dependencies {
     androidTestImplementation "androidx.compose.ui:ui-test-junit4:$compose_version"
 
     implementation "androidx.fragment:fragment-ktx:$activity_version"
-    implementation 'com.google.android.material:material:1.6.0-beta01'
+    implementation 'com.google.android.material:material:1.7.0-alpha01'
     testImplementation 'junit:junit:4.13.2'
-    androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha05'
-    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0-alpha05'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.4-alpha06'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.0-alpha06'
     implementation 'androidx.recyclerview:recyclerview:1.3.0-alpha02'
     implementation 'com.google.code.gson:gson:2.9.0'
     implementation 'com.squareup.moshi:moshi:1.13.0'
