@@ -15,6 +15,8 @@ class SavoConverter {
 
         private val vowels=arrayOf('a', 'e', 'i', 'o', 'u', 'y', 'ä', 'ö')
 
+        //TODO: split combined words by first splitting to syllables, then 2-3 syllable / word
+
         /**
          * Convert single word to Savo dialect
          * @param wordToConvert input
